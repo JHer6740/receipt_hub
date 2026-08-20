@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../config/app_config.dart';
 import 'api_models.dart';
 
 /// Why a request failed, in terms the interface can respond to.
@@ -89,11 +90,15 @@ class MobileApi {
   String? _baseUrl;
   String? _token;
 
-  /// Restore the saved host address and session, if this device has one.
+  /// Restore the saved session, if this device has one.
+  ///
+  /// The address falls back to this build's configured service, so a stored
+  /// session keeps working even though nothing asks the person for a host.
   Future<bool> restoreSession() async {
-    _baseUrl = await _secureStorage.read(key: _serverKey);
+    _baseUrl =
+        await _secureStorage.read(key: _serverKey) ?? AppConfig.apiBaseUrl;
     _token = await _secureStorage.read(key: _tokenKey);
-    return _baseUrl != null && _token != null;
+    return _token != null;
   }
 
   Future<String?> savedServerUrl() async =>
@@ -122,7 +127,59 @@ class MobileApi {
     }
   }
 
-  /// Exchange the household PIN for a bearer token and remember both.
+  /// Create an account on the configured service.
+  ///
+  /// Returns the session the service issues, so a new account lands straight in
+  /// the app rather than being sent back to sign in.
+  Future<SessionEnvelope> register({
+    required String email,
+    required String password,
+    String? displayName,
+  }) => _authenticate('/api/v1/auth/register', <String, dynamic>{
+    'email': email,
+    'password': password,
+    if (displayName != null && displayName.trim().isNotEmpty)
+      'display_name': displayName.trim(),
+  });
+
+  /// Sign in to the configured service with an email and password.
+  Future<SessionEnvelope> logIn({
+    required String email,
+    required String password,
+  }) => _authenticate('/api/v1/auth/login', <String, dynamic>{
+    'email': email,
+    'password': password,
+  });
+
+  /// Ask the service to send a password reset email.
+  Future<void> requestPasswordReset(String email) async {
+    _baseUrl ??= AppConfig.apiBaseUrl;
+    await _post('/api/v1/auth/reset-password', <String, dynamic>{
+      'email': email,
+    });
+  }
+
+  /// Shared account-auth path: post credentials, keep the session it returns.
+  Future<SessionEnvelope> _authenticate(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    // A hosted build knows its own address; nobody is asked for one.
+    final base = _baseUrl ??= AppConfig.apiBaseUrl;
+    final data = await _send<Map<String, dynamic>>(
+      () => _dio.post<Map<String, dynamic>>('$base$path', data: body),
+    );
+    final session = SessionEnvelope.fromJson(data);
+    _token = session.token;
+    await _secureStorage.write(key: _serverKey, value: base);
+    await _secureStorage.write(key: _tokenKey, value: session.token);
+    return session;
+  }
+
+  /// Exchange a household PIN for a bearer token against a hand-entered host.
+  ///
+  /// Development and support only. The product path is [register] / [logIn];
+  /// this exists so the app can be driven against a local backend.
   Future<SessionEnvelope> signIn({
     required String serverUrl,
     required String pin,
@@ -178,6 +235,51 @@ class MobileApi {
   // -------------------------------------------------------------------------
   // Reads
   // -------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // Households
+  // ---------------------------------------------------------------------------
+
+  /// Every household this account belongs to, plus any pending requests.
+  Future<List<HouseholdSummary>> households() async {
+    final data = await _get('/api/v1/households');
+    return <HouseholdSummary>[
+      for (final row in (data['items'] as List<dynamic>? ?? const []))
+        if (row is Map<String, dynamic>) HouseholdSummary.fromJson(row),
+    ];
+  }
+
+  /// Start a new household. The creator owns it.
+  Future<HouseholdSummary> createHousehold(String name) async {
+    final data = await _post('/api/v1/households', <String, dynamic>{
+      'name': name,
+    });
+    return HouseholdSummary.fromJson(data);
+  }
+
+  /// Ask to join an existing household by its ID or join code.
+  ///
+  /// This creates a request, not a membership: the household's owner or an
+  /// admin has to approve it before any of its receipts are visible.
+  Future<HouseholdSummary> requestToJoinHousehold(String joinCode) async {
+    final data = await _post(
+      '/api/v1/households/${Uri.encodeComponent(joinCode)}/join-requests',
+      const <String, dynamic>{},
+    );
+    return HouseholdSummary.fromJson(data);
+  }
+
+  /// Withdraw a request this account made.
+  Future<void> cancelJoinRequest(String householdId) async {
+    _requireHost();
+    await _send<Map<String, dynamic>>(
+      () => _dio.delete<Map<String, dynamic>>(
+        '$_baseUrl/api/v1/households/${Uri.encodeComponent(householdId)}'
+        '/join-requests/me',
+        options: _authOptions(),
+      ),
+    );
+  }
 
   Future<BootstrapSnapshot> bootstrap() async {
     final data = await _get('/api/v1/bootstrap');

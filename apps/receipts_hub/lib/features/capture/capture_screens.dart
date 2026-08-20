@@ -237,6 +237,29 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
 
   @override
   Widget build(BuildContext context) {
+    // A receipt has to be filed into a household, so there is nothing to
+    // capture until this account is in one. Reaching the camera first would
+    // only produce photos with nowhere to go.
+    final connected = ref.watch(
+      appControllerProvider.select((state) => state.connected),
+    );
+    if (!connected) {
+      return Scaffold(
+        body: SafeArea(
+          child: AppStatePanel(
+            key: const Key('capture-needs-household'),
+            icon: Icons.home_work_outlined,
+            title: 'Choose a household first',
+            message:
+                'Receipts are filed into a household. Create one or join an '
+                'existing one, then scan away.',
+            actionLabel: 'Your households',
+            onAction: () => context.go('/household'),
+          ),
+        ),
+      );
+    }
+
     final capture = ref.watch(
       appControllerProvider.select(
         (state) => (pages: state.capturePages, denied: state.cameraDenied),

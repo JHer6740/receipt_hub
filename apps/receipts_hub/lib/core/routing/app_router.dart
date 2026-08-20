@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/account/account_screen.dart';
+import '../../features/auth/auth_screens.dart';
 import '../../features/capture/capture_screens.dart';
+import '../../features/developer/host_connection_screen.dart';
+import '../../features/household/household_choice_screen.dart';
 import '../../features/compare/comparison_screens.dart';
 import '../../features/ledger/ledger_screens.dart';
 import '../../features/onboarding/onboarding_screens.dart';
@@ -45,10 +48,31 @@ GoRouter createAppRouter({String initialLocation = '/welcome'}) {
         name: 'welcome',
         builder: (context, state) => const WelcomeScreen(),
       ),
+      // The product front door: an account on the configured service. Nobody
+      // is asked for a host address or a PIN.
       GoRoute(
-        path: '/connect',
-        name: 'connect',
-        builder: (context, state) => const ConnectionScreen(),
+        path: '/create-account',
+        name: 'create-account',
+        builder: (context, state) =>
+            const AuthScreen(mode: AuthMode.createAccount),
+      ),
+      GoRoute(
+        path: '/sign-in',
+        name: 'sign-in',
+        builder: (context, state) => const AuthScreen(mode: AuthMode.signIn),
+      ),
+      // Development and support only; gated on a debug build.
+      GoRoute(
+        path: '/developer/connection',
+        name: 'developer-connection',
+        builder: (context, state) => const HostConnectionScreen(),
+      ),
+      // Where an account picks the ledger its receipts go into. Reached after
+      // authentication, never before it.
+      GoRoute(
+        path: '/household',
+        name: 'household-choice',
+        builder: (context, state) => const HouseholdChoiceScreen(),
       ),
       GoRoute(
         path: '/household/join',
@@ -152,11 +176,6 @@ GoRouter createAppRouter({String initialLocation = '/welcome'}) {
             path: '/account',
             name: 'account',
             builder: (context, state) => const AccountScreen(),
-          ),
-          GoRoute(
-            path: '/household/members',
-            name: 'household-members-shell',
-            builder: (context, state) => const MvpHouseholdAdminScreen(),
           ),
         ],
       ),

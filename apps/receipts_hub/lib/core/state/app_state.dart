@@ -123,6 +123,8 @@ class AppState {
     this.isLoading = false,
     this.failureMessage,
     this.householdName = 'Receipts Hub',
+    this.households = const <wire.HouseholdSummary>[],
+    this.householdsLoaded = false,
     this.monthTotalCents = 0,
     this.collections = const <SpendCollection>[],
     this.monthTrend = const <wire.MonthPoint>[],
@@ -156,6 +158,15 @@ class AppState {
   /// The last host failure, in words a person can act on.
   final String? failureMessage;
   final String householdName;
+
+  /// Households this account can see, including pending requests.
+  final List<wire.HouseholdSummary> households;
+
+  /// Whether the household list has been fetched at least once. Distinguishes
+  /// "none yet" from "not asked", so the chooser never shows an empty list as
+  /// though it were an answer.
+  final bool householdsLoaded;
+
   final int monthTotalCents;
   final List<SpendCollection> collections;
   final List<wire.MonthPoint> monthTrend;
@@ -163,6 +174,14 @@ class AppState {
   final wire.InsightsSnapshot? insights;
 
   bool get connected => connection == HubConnection.connected;
+
+  /// Households this account is actually a member of.
+  List<wire.HouseholdSummary> get activeHouseholds =>
+      households.where((household) => household.isActive).toList();
+
+  /// Requests still waiting on an owner or admin.
+  List<wire.HouseholdSummary> get pendingHouseholds =>
+      households.where((household) => household.isPending).toList();
 
   /// True while a request is establishing or restoring the session.
   bool get isConnecting => connection == HubConnection.connecting;
@@ -194,6 +213,8 @@ class AppState {
     String? failureMessage,
     bool clearFailure = false,
     String? householdName,
+    List<wire.HouseholdSummary>? households,
+    bool? householdsLoaded,
     int? monthTotalCents,
     List<SpendCollection>? collections,
     List<wire.MonthPoint>? monthTrend,
@@ -220,6 +241,8 @@ class AppState {
           ? null
           : (failureMessage ?? this.failureMessage),
       householdName: householdName ?? this.householdName,
+      households: households ?? this.households,
+      householdsLoaded: householdsLoaded ?? this.householdsLoaded,
       monthTotalCents: monthTotalCents ?? this.monthTotalCents,
       collections: collections ?? this.collections,
       monthTrend: monthTrend ?? this.monthTrend,
@@ -284,9 +307,72 @@ class AppController extends Notifier<AppState> {
     await refresh();
   }
 
-  /// Sign in to a host and load the household.
+  /// Create an account and load whatever household it can see.
   ///
   /// Returns null on success, or a message describing what went wrong.
+  Future<String?> createAccount({
+    required String email,
+    required String password,
+    String? displayName,
+  }) => _withSession(
+    () => api.register(
+      email: email,
+      password: password,
+      displayName: displayName,
+    ),
+  );
+
+  /// Sign in with an email and password.
+  Future<String?> logIn({
+    required String email,
+    required String password,
+  }) => _withSession(() => api.logIn(email: email, password: password));
+
+  Future<String?> requestPasswordReset(String email) async {
+    state = state.copyWith(isLoading: true, clearFailure: true);
+    try {
+      await api.requestPasswordReset(email);
+      state = state.copyWith(isLoading: false);
+      return null;
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(isLoading: false, failureMessage: failure.message);
+      return failure.message;
+    }
+  }
+
+  /// Run one authentication attempt and settle the connection state from it.
+  Future<String?> _withSession(
+    Future<wire.SessionEnvelope> Function() authenticate,
+  ) async {
+    state = state.copyWith(
+      connection: HubConnection.connecting,
+      isLoading: true,
+      clearFailure: true,
+    );
+    try {
+      final session = await authenticate();
+      state = state.copyWith(
+        serverUrl: api.baseUrl ?? state.serverUrl,
+        householdName: session.householdName,
+        onboardingComplete: true,
+        connection: HubConnection.connected,
+      );
+      await refresh();
+      return null;
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(
+        connection: _connectionFor(failure),
+        isLoading: false,
+        failureMessage: failure.message,
+      );
+      return failure.message;
+    }
+  }
+
+  /// Sign in to a hand-entered host with a household PIN.
+  ///
+  /// Development and support only; the product path is [createAccount] and
+  /// [logIn].
   Future<String?> signIn({
     required String serverUrl,
     required String pin,
@@ -372,6 +458,104 @@ class AppController extends Notifier<AppState> {
   }
 
   void clearFailure() => state = state.copyWith(clearFailure: true);
+
+  // ---------------------------------------------------------------------------
+  // Households
+  // ---------------------------------------------------------------------------
+
+  /// Load the households this account can see.
+  Future<String?> loadHouseholds() async {
+    if (!api.hasSession) {
+      state = state.copyWith(connection: HubConnection.signedOut);
+      return 'Sign in to see your households.';
+    }
+    state = state.copyWith(isLoading: true, clearFailure: true);
+    try {
+      final households = await api.households();
+      state = state.copyWith(
+        households: households,
+        householdsLoaded: true,
+        isLoading: false,
+      );
+      return null;
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(
+        isLoading: false,
+        connection: _connectionFor(failure),
+        failureMessage: failure.message,
+      );
+      return failure.message;
+    }
+  }
+
+  /// Start a new household and enter it.
+  Future<String?> createHousehold(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return 'Give your household a name.';
+    state = state.copyWith(isLoading: true, clearFailure: true);
+    try {
+      final household = await api.createHousehold(trimmed);
+      state = state.copyWith(
+        households: <wire.HouseholdSummary>[...state.households, household],
+        householdsLoaded: true,
+        householdName: household.name,
+        isLoading: false,
+      );
+      await refresh();
+      return null;
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(isLoading: false, failureMessage: failure.message);
+      return failure.message;
+    }
+  }
+
+  /// Ask to join a household. This is a request, not access.
+  Future<String?> requestToJoinHousehold(String joinCode) async {
+    final trimmed = joinCode.trim();
+    if (trimmed.isEmpty) return 'Enter the household ID or join code.';
+    state = state.copyWith(isLoading: true, clearFailure: true);
+    try {
+      final requested = await api.requestToJoinHousehold(trimmed);
+      state = state.copyWith(
+        households: <wire.HouseholdSummary>[...state.households, requested],
+        householdsLoaded: true,
+        isLoading: false,
+      );
+      return null;
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(isLoading: false, failureMessage: failure.message);
+      return failure.message;
+    }
+  }
+
+  /// Withdraw a pending request.
+  Future<String?> cancelJoinRequest(String householdId) async {
+    state = state.copyWith(isLoading: true, clearFailure: true);
+    try {
+      await api.cancelJoinRequest(householdId);
+      state = state.copyWith(
+        households: state.households
+            .where((household) => household.id != householdId)
+            .toList(),
+        isLoading: false,
+      );
+      return null;
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(isLoading: false, failureMessage: failure.message);
+      return failure.message;
+    }
+  }
+
+  /// Enter a household. Household-scoped data reloads before it is shown.
+  Future<String?> enterHousehold(wire.HouseholdSummary household) async {
+    state = state.copyWith(
+      householdName: household.name,
+      connection: HubConnection.connected,
+      clearFailure: true,
+    );
+    await refresh();
+    return state.failureMessage;
+  }
 
   // ---------------------------------------------------------------------------
   // Local preferences and capture

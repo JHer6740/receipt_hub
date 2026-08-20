@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/design/app_components.dart';
 import '../core/design/app_theme.dart';
+import '../core/state/app_state.dart';
 
-class MvpAccessScreen extends StatefulWidget {
+class MvpAccessScreen extends ConsumerStatefulWidget {
   const MvpAccessScreen({super.key});
 
   @override
-  State<MvpAccessScreen> createState() => _MvpAccessScreenState();
+  ConsumerState<MvpAccessScreen> createState() => _MvpAccessScreenState();
 }
 
-class _MvpAccessScreenState extends State<MvpAccessScreen> {
+class _MvpAccessScreenState extends ConsumerState<MvpAccessScreen> {
   final _householdController = TextEditingController();
   bool _requestSent = false;
   bool _busy = false;
@@ -33,11 +35,16 @@ class _MvpAccessScreenState extends State<MvpAccessScreen> {
       _busy = true;
       _error = null;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 450));
+    // A real request to the service. This used to be a 450ms delay that set a
+    // flag, so the screen reported a request nobody had received.
+    final failure = await ref
+        .read(appControllerProvider.notifier)
+        .requestToJoinHousehold(id);
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _requestSent = true;
+      _requestSent = failure == null;
+      _error = failure;
     });
   }
 
@@ -107,8 +114,10 @@ class _MvpAccessScreenState extends State<MvpAccessScreen> {
             ],
             const SizedBox(height: 16),
             TextButton(
-              onPressed: () => context.go('/home'),
-              child: Text(_requestSent ? 'Return to account' : 'Not now'),
+              onPressed: () => context.canPop()
+                  ? context.pop()
+                  : context.go('/household'),
+              child: Text(_requestSent ? 'Back to my households' : 'Not now'),
             ),
           ],
         ),

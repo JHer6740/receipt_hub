@@ -67,6 +67,7 @@ void main() {
         final colors = AppColors.resolve(colorway, brightness);
         await tester.pumpWidget(
           ProviderScope(
+            overrides: releaseSurfaceOverrides(),
             child: MaterialApp(
               debugShowCheckedModeBanner: false,
               theme: buildTheme(colors, brightness),
@@ -124,7 +125,7 @@ Future<void> goldenRoute(
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: household ? householdOverrides() : const <Override>[],
+      overrides: household ? householdOverrides() : releaseSurfaceOverrides(),
       child: RepaintBoundary(
         key: const Key('golden-boundary'),
         child: ReceiptsHubApp(router: router),

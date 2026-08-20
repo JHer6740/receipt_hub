@@ -10,6 +10,7 @@ import 'package:receipts_hub/core/models/models.dart';
 import 'package:receipts_hub/core/network/api_models.dart' as wire;
 import 'package:receipts_hub/core/state/app_state.dart';
 import 'package:receipts_hub/features/compare/comparison_data.dart';
+import 'package:receipts_hub/features/developer/host_connection_screen.dart';
 
 abstract final class HouseholdFixture {
   /// A fixed clock so assertions do not drift with the calendar.
@@ -394,4 +395,12 @@ List<Override> householdOverrides({AppState? state}) => <Override>[
   comparisonBasketProvider.overrideWithValue(
     HouseholdFixture.comparisonBasket,
   ),
+  // Baselines and assertions describe the shipped surface, so debug-only
+  // developer affordances stay out of them.
+  developerToolsProvider.overrideWithValue(false),
+];
+
+/// Overrides for a signed-out app that still hides developer affordances.
+List<Override> releaseSurfaceOverrides() => <Override>[
+  developerToolsProvider.overrideWithValue(false),
 ];

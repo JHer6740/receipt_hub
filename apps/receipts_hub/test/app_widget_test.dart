@@ -25,7 +25,7 @@ Future<GoRouter> pumpHub(
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: household ? householdOverrides() : const <Override>[],
+      overrides: household ? householdOverrides() : releaseSurfaceOverrides(),
       child: ReceiptsHubApp(router: router),
     ),
   );
@@ -47,9 +47,15 @@ void main() {
     expect(find.byType(Switch), findsNothing);
     expect(find.text('Join a household'), findsNothing);
 
+    // No host address, no PIN, no talk of a home computer: an account.
+    expect(find.textContaining('host'), findsNothing);
+    expect(find.text('Developer: connect to a host'), findsNothing);
+
     await tester.tap(find.text('Get started'));
     await tester.pumpAndSettle();
-    expect(find.text('Connect to your hub'), findsOneWidget);
+    expect(find.text('Create your account'), findsOneWidget);
+    expect(find.byKey(const Key('email-field')), findsOneWidget);
+    expect(find.byKey(const Key('password-field')), findsOneWidget);
   });
 
   testWidgets('a household with no data renders a state, never a zero total', (
@@ -81,6 +87,17 @@ void main() {
     await tester.tap(find.widgetWithText(CheckboxListTile, 'Coffee'));
     await tester.pump();
     expect(find.text('PICKED UP · 2'), findsOneWidget);
+  });
+
+  testWidgets('capture needs a household before it will open the camera', (
+    tester,
+  ) async {
+    await pumpHub(tester, location: '/capture', household: false);
+
+    // Receipts are filed into a household, so there is nothing to capture
+    // until the account is in one.
+    expect(find.byKey(const Key('capture-needs-household')), findsOneWidget);
+    expect(find.bySemanticsLabel('Take photo'), findsNothing);
   });
 
   testWidgets('the shutter reports a missing camera instead of queueing a page', (

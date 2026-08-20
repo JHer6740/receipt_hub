@@ -617,3 +617,40 @@ class HostSettings {
     backupEnabled: json['backup_enabled'] as bool? ?? false,
   );
 }
+
+/// One household this account can see, and where the account stands with it.
+///
+/// A membership and a pending request are deliberately the same shape so the
+/// UI can list both without pretending a request is access.
+class HouseholdSummary {
+  const HouseholdSummary({
+    required this.id,
+    required this.name,
+    required this.role,
+    required this.status,
+    this.memberCount = 0,
+  });
+
+  final String id;
+  final String name;
+
+  /// `owner`, `admin`, `member` or `viewer`.
+  final String role;
+
+  /// `active`, `pending` or `declined`.
+  final String status;
+  final int memberCount;
+
+  bool get isActive => status == 'active';
+  bool get isPending => status == 'pending';
+  bool get canApproveOthers => role == 'owner' || role == 'admin';
+
+  factory HouseholdSummary.fromJson(Map<String, dynamic> json) =>
+      HouseholdSummary(
+        id: json['id']?.toString() ?? '',
+        name: json['name'] as String? ?? 'Household',
+        role: json['role'] as String? ?? 'member',
+        status: json['status'] as String? ?? 'active',
+        memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+      );
+}
