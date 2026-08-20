@@ -674,6 +674,7 @@ class AppController extends Notifier<AppState> {
     try {
       final updated = await api.toggleShoppingItem(
         id,
+        pickedUp: !existing.isPickedUp,
         version: existing.version,
       );
       state = state.copyWith(
@@ -728,10 +729,36 @@ class AppController extends Notifier<AppState> {
   // Receipts
   // ---------------------------------------------------------------------------
 
-  void deleteReceipt(String id) {
+  /// Delete a receipt for the whole household.
+  ///
+  /// Returns null on success, or a message. This used to only filter the local
+  /// list, so "Receipt deleted" was false and the row returned on the next
+  /// refresh.
+  Future<String?> deleteReceipt(String id) async {
+    if (!api.hasSession) {
+      const message = 'Sign in to delete this receipt.';
+      state = state.copyWith(failureMessage: message);
+      return message;
+    }
+    final previous = state.receipts;
     state = state.copyWith(
-      receipts: state.receipts.where((receipt) => receipt.id != id).toList(),
+      receipts: previous.where((receipt) => receipt.id != id).toList(),
+      isLoading: true,
+      clearFailure: true,
     );
+    try {
+      await api.deleteReceipt(id);
+      await refresh();
+      return null;
+    } on ApiFailure catch (failure) {
+      // Put it back: the household still has this receipt.
+      state = state.copyWith(
+        receipts: previous,
+        isLoading: false,
+        failureMessage: failure.message,
+      );
+      return failure.message;
+    }
   }
 
   void markReceiptConfirmed(String id) {
@@ -799,7 +826,9 @@ class AppController extends Notifier<AppState> {
               (item) => wire.LineItemDraft(
                 description: item.name,
                 quantity: item.qty,
-                unit: 'each',
+                // The line's own unit. This was hardcoded to `each`, so filing
+                // a correction rewrote every weighed or measured line.
+                unit: item.unit,
                 lineTotalCents: item.lineCents,
               ),
             )
@@ -905,10 +934,10 @@ final receiptByIdProvider = Provider.family<Receipt?, String>((ref, id) {
   return null;
 });
 
-/// Full detail for one receipt, fetched from the host on demand.
+/// Full detail for one receipt, fetched from the service on demand.
 ///
-/// The ledger list carries only summaries, so the edit and view surfaces load
-/// line items, warnings and image URLs separately.
+/// The ledger list carries only summaries, so the review and view surfaces
+/// load line items, tax, warnings, duplicate state and image URLs separately.
 final receiptDetailProvider = FutureProvider.family<wire.ReceiptDetail?, String>(
   (ref, id) async {
     final api = ref.watch(mobileApiProvider);
@@ -916,3 +945,25 @@ final receiptDetailProvider = FutureProvider.family<wire.ReceiptDetail?, String>
     return ref.watch(receiptsRepositoryProvider).loadReceiptDetail(id);
   },
 );
+
+/// One receipt with everything the service knows about it.
+///
+/// Screens watch this rather than the list summary. A summary has no line
+/// items, tax or reference, so reading it on a detail screen rendered every
+/// live receipt as "No line items were read."
+final receiptWithDetailProvider = FutureProvider.family<Receipt?, String>((
+  ref,
+  id,
+) async {
+  final summary = ref.watch(receiptByIdProvider(id));
+  final api = ref.watch(mobileApiProvider);
+  if (!api.hasSession) return summary;
+  try {
+    return await ref.watch(receiptsRepositoryProvider).loadFullReceipt(id);
+  } on ApiFailure {
+    // The summary is still true as far as it goes; the screen reports that
+    // detail could not be loaded rather than pretending the receipt is empty.
+    if (summary != null) return summary;
+    rethrow;
+  }
+});

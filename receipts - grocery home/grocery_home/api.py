@@ -26,6 +26,7 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     status,
 )
 from fastapi import UploadFile as UploadPart
@@ -404,14 +405,18 @@ def _image_count(receipt: Receipt) -> int:
 
 
 def _receipt_summary(receipt: Receipt) -> dict[str, Any]:
+    _collection_id, _collection_name = services.receipt_collection(receipt)
     return {
         "id": receipt.id,
         "merchant": receipt.merchant_name or receipt.store_name or "Unknown shop",
         "date": receipt.purchase_date.isoformat() if receipt.purchase_date else None,
         "total": receipt.total_cents or 0,
         "status": services.enum_value(receipt.status),
-        "collection_id": None,
-        "collection_name": None,
+        # Derived from the line-item categories, so Collections is a view of
+        # one categorisation rather than a second one. This was hardcoded to
+        # None, which left every receipt permanently "unfiled".
+        "collection_id": _collection_id,
+        "collection_name": _collection_name,
         "image_count": _image_count(receipt),
         "item_count": len(receipt.items),
         "attention_required": receipt.status in services.REVIEWABLE_STATUSES,
@@ -500,6 +505,7 @@ def get_receipt(
         "savings": receipt.savings_cents,
         "is_grocery": receipt.is_grocery,
         "duplicate_of_id": receipt.duplicate_of_id,
+        "transaction_number": receipt.transaction_number,
         "balance": services.receipt_balance(receipt),
         "warnings": services.receipt_warnings(receipt),
         "image_urls": [
@@ -593,6 +599,23 @@ def update_receipt(
         },
         trace_id=trace,
     )
+
+
+@router.delete("/receipts/{receipt_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_receipt(
+    receipt_id: str,
+    auth: AuthenticatedHousehold,
+    session: DbSession,
+) -> Response:
+    """Delete a receipt and its line items."""
+
+    _household, trace = auth
+    try:
+        services.delete_receipt(session, receipt_id)
+    except services.ServiceError as exc:
+        raise service_error(exc, trace) from exc
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/receipts/{receipt_id}/image")

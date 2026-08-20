@@ -382,6 +382,17 @@ class MobileApi {
     return UploadTicket.fromJson(data);
   }
 
+  /// Delete a receipt for the whole household.
+  Future<void> deleteReceipt(String id) async {
+    _requireHost();
+    await _send<Map<String, dynamic>>(
+      () => _dio.delete<Map<String, dynamic>>(
+        '$_baseUrl/api/v1/receipts/$id',
+        options: _authOptions(),
+      ),
+    );
+  }
+
   Future<UploadProgress> uploadStatus(String batchId) async =>
       UploadProgress.fromJson(await _get('/api/v1/uploads/$batchId'));
 
@@ -407,9 +418,16 @@ class MobileApi {
 
   /// Tick or untick an item. [version] is the copy the device last saw, so a
   /// stale write is reported as a conflict instead of silently winning.
-  Future<ShoppingItem> toggleShoppingItem(String id, {int? version}) async {
+  Future<ShoppingItem> toggleShoppingItem(
+    String id, {
+    required bool pickedUp,
+    int? version,
+  }) async {
+    // The status being moved *to*. This was hardcoded to `completed`, so
+    // un-ticking an item sent "completed" again and the tick came straight
+    // back from the service.
     final data = await _patch('/api/v1/shopping/$id', <String, dynamic>{
-      'status': 'completed',
+      'status': pickedUp ? 'completed' : 'active',
       'version': ?version,
     });
     return ShoppingItem.fromJson(data);

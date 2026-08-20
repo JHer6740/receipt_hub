@@ -97,7 +97,15 @@ class CaptureFlowState {
 }
 
 class CaptureFlowController extends AutoDisposeNotifier<CaptureFlowState> {
+  /// How long to keep asking before giving the person a way out.
+  ///
+  /// Polling used to reschedule itself forever whenever the service was
+  /// unreachable, so a sleeping service left the screen turning over with no
+  /// timeout and no cancel.
+  static const _pollBudget = Duration(minutes: 3);
+
   Timer? _poll;
+  DateTime? _pollingSince;
   bool _disposed = false;
 
   @override
@@ -132,6 +140,7 @@ class CaptureFlowController extends AutoDisposeNotifier<CaptureFlowState> {
       // The photos are safely on the host now, so the local copies are no
       // longer the only record and the capture tray can be cleared.
       ref.read(appControllerProvider.notifier).clearCapture();
+      _pollingSince = null;
       _schedulePoll();
     } on ApiFailure catch (failure) {
       if (_disposed) return;
@@ -150,6 +159,7 @@ class CaptureFlowController extends AutoDisposeNotifier<CaptureFlowState> {
       stage: CaptureFlowStage.processing,
       clearMessage: true,
     );
+    _pollingSince = null;
     try {
       await _api.retryUpload(batchId);
       _schedulePoll();
@@ -164,7 +174,24 @@ class CaptureFlowController extends AutoDisposeNotifier<CaptureFlowState> {
 
   void _schedulePoll() {
     _poll?.cancel();
+    final since = _pollingSince ??= DateTime.now();
+    if (DateTime.now().difference(since) >= _pollBudget) {
+      state = state.copyWith(
+        stage: CaptureFlowStage.failed,
+        message:
+            'Your receipt is still being read and is taking longer than '
+            'usual. Your photos are safe — try again, or come back to it '
+            'from Receipts.',
+      );
+      return;
+    }
     _poll = Timer(const Duration(milliseconds: 900), _pollOnce);
+  }
+
+  /// Stop following this upload. The batch keeps processing on the service.
+  void stopFollowing() {
+    _poll?.cancel();
+    _pollingSince = null;
   }
 
   Future<void> _pollOnce() async {

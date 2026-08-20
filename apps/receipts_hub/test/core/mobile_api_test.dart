@@ -325,7 +325,7 @@ void main() {
       );
 
       await expectLater(
-        api.toggleShoppingItem('s-1', version: 1),
+        api.toggleShoppingItem('s-1', pickedUp: true, version: 1),
         throwsA(
           isA<ApiFailure>().having(
             (f) => f.kind,

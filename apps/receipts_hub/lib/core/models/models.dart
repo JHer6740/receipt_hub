@@ -36,12 +36,36 @@ class LineItem {
     required this.name,
     required this.qty,
     required this.lineCents,
+    this.unit = 'each',
+    this.needsReview = false,
+    this.category = '',
   });
 
   final String id;
   final String name;
   final num qty;
   final int lineCents;
+
+  /// The unit the quantity is measured in. Carried so filing a correction does
+  /// not silently rewrite every line to `each`.
+  final String unit;
+
+  /// True when the service read this line with low confidence, so the review
+  /// screen can mark this row rather than the receipt as a whole.
+  final bool needsReview;
+
+  final String category;
+
+  LineItem copyWith({String? name, num? qty, int? lineCents, String? unit}) =>
+      LineItem(
+        id: id,
+        name: name ?? this.name,
+        qty: qty ?? this.qty,
+        lineCents: lineCents ?? this.lineCents,
+        unit: unit ?? this.unit,
+        needsReview: needsReview,
+        category: category,
+      );
 }
 
 class Receipt {
@@ -56,6 +80,11 @@ class Receipt {
     required this.taxCents,
     required this.items,
     this.pageImagePaths = const <String>[],
+    this.dated = true,
+    this.warnings = const <String>[],
+    this.duplicateOfId,
+    this.serverBalanceDifferenceCents,
+    this.detailLoaded = false,
   });
 
   final String id;
@@ -68,6 +97,29 @@ class Receipt {
   final int taxCents;
   final List<LineItem> items;
   final List<String> pageImagePaths;
+
+  /// Whether the service actually has a purchase date for this receipt.
+  ///
+  /// The list mapper used to substitute today's date for a missing one, which
+  /// made the "saved, but held out of dated insights" outcome impossible to
+  /// render — the interface could not tell the date was absent.
+  final bool dated;
+
+  /// What the service wants flagged on this receipt, in its own words.
+  final List<String> warnings;
+
+  /// Set when the service matched this against a receipt already filed.
+  final String? duplicateOfId;
+
+  /// The service's own reconciliation of line items against the stated total.
+  /// Null on a list summary, which carries no line items to reconcile.
+  final int? serverBalanceDifferenceCents;
+
+  /// True once full detail has been fetched. A summary has no line items, so
+  /// screens must not read an empty list as "this receipt has none".
+  final bool detailLoaded;
+
+  bool get isDuplicate => duplicateOfId != null;
 
   /// A receipt cannot be filed without both a merchant and a positive total.
   bool get isFileable => merchant.trim().isNotEmpty && totalCents > 0;

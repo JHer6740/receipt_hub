@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import func, select
 
+from grocery_home import services
 from grocery_home.analytics import _household_today
 from grocery_home.app import create_app
 from grocery_home.config import Settings, sqlite_url
@@ -659,3 +660,55 @@ def test_settings_report_host_limits_without_promising_hosted_features(
     # The shared price index and hosted backups belong to a later phase.
     assert data["sharing_available"] is False
     assert data["backup_enabled"] is False
+
+def test_deleting_a_receipt_removes_it_for_the_household(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """The client offered delete long before the API did, so a deleted receipt
+    reappeared on the next refresh."""
+
+    client, database, settings = api
+    token = _token(client, database)
+    receipt_id = _seed_review_receipt(database, settings)
+
+    anonymous = client.delete(f"/api/v1/receipts/{receipt_id}")
+    assert anonymous.status_code == 401
+
+    removed = client.delete(f"/api/v1/receipts/{receipt_id}", headers=_auth(token))
+    assert removed.status_code == 204
+
+    gone = client.get(f"/api/v1/receipts/{receipt_id}", headers=_auth(token))
+    assert gone.status_code == 404
+
+    listed = client.get("/api/v1/receipts", headers=_auth(token)).json()
+    assert all(row["id"] != receipt_id for row in listed["data"]["items"])
+
+    missing = client.delete(f"/api/v1/receipts/{receipt_id}", headers=_auth(token))
+    assert missing.status_code == 404
+
+
+def test_a_receipt_reports_the_collection_its_items_fall_into(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """Collections are a view of the line-item categories. `collection_id` was
+    hardcoded to None, so every receipt read as permanently unfiled."""
+
+    client, database, settings = api
+    token = _token(client, database)
+    receipt_id = _seed_review_receipt(database, settings)
+
+    detail = client.get(f"/api/v1/receipts/{receipt_id}", headers=_auth(token)).json()
+    payload = detail["data"]
+
+    # Derived from whichever category holds most of the money, and normalised
+    # so the client can match it against the collection list.
+    assert "collection_id" in payload
+    assert "collection_name" in payload
+    if payload["collection_name"] is not None:
+        assert payload["collection_id"] == services.normalize_collection_id(
+            payload["collection_name"]
+        )
+
+    # The review screen edits this, so detail has to carry it.
+    assert "transaction_number" in payload
+

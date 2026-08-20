@@ -508,6 +508,41 @@ def receipt_view(receipt: Receipt) -> dict[str, Any]:
     }
 
 
+def receipt_collection(receipt: Receipt) -> tuple[str | None, str | None]:
+    """Which collection a receipt belongs to.
+
+    A collection is a view of the line-item categories, so a receipt belongs to
+    whichever category accounts for most of its money. This is derived rather
+    than stored so there is only one categorisation to keep correct.
+
+    Returns ``(None, None)`` when nothing has been categorised yet, so the
+    interface can say "unfiled" instead of inventing a collection.
+    """
+
+    totals: dict[str, int] = {}
+    for item in receipt.items:
+        category = str(item.category or "").strip()
+        if not category or category.casefold() == "uncategorised":
+            continue
+        totals[category] = totals.get(category, 0) + int(item.line_total_cents or 0)
+    if not totals:
+        return None, None
+    name = max(totals, key=lambda key: totals[key])
+    return normalize_collection_id(name), name
+
+
+def delete_receipt(session: Session, receipt_id: str) -> None:
+    """Remove a receipt and its line items.
+
+    The client offered a delete action long before this existed, so a deleted
+    receipt reappeared on the next refresh.
+    """
+
+    receipt = load_receipt(session, receipt_id, with_items=False)
+    session.delete(receipt)
+    session.flush()
+
+
 def receipt_warnings(receipt: Receipt) -> list[str]:
     """List the things a person still needs to fix before a receipt is filed."""
 
@@ -1091,6 +1126,8 @@ def dismiss_suggestion(session: Session, key: str) -> ShoppingItem:
 
 __all__ = [
     "COLLECTION_ICONS",
+    "receipt_collection",
+    "delete_receipt",
     "REVIEWABLE_STATUSES",
     "TERMINAL_UPLOAD_STATUSES",
     "ConflictError",

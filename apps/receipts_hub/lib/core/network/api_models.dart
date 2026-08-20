@@ -198,8 +198,15 @@ class ApiLineItem {
     unitPriceCents: _centsOrNull(json['unit_price']),
   );
 
-  LineItem toDomain() =>
-      LineItem(id: id, name: product, qty: quantity, lineCents: totalCents);
+  LineItem toDomain() => LineItem(
+    id: id,
+    name: product,
+    qty: quantity,
+    lineCents: totalCents,
+    unit: unit,
+    needsReview: needsReview,
+    category: category,
+  );
 }
 
 class ReceiptBalance {
@@ -232,6 +239,7 @@ class ReceiptDetail {
     required this.imageUrls,
     required this.taxCents,
     required this.duplicateOfId,
+    this.transactionNumber,
   });
 
   final ReceiptSummary summary;
@@ -243,6 +251,9 @@ class ReceiptDetail {
   final List<String> imageUrls;
   final int? taxCents;
   final String? duplicateOfId;
+
+  /// The receipt's own transaction reference, which the review screen edits.
+  final String? transactionNumber;
 
   factory ReceiptDetail.fromJson(Map<String, dynamic> json) => ReceiptDetail(
     summary: ReceiptSummary.fromJson(json),
@@ -263,6 +274,7 @@ class ReceiptDetail {
     ],
     taxCents: _centsOrNull(json['tax']),
     duplicateOfId: json['duplicate_of_id'] as String?,
+    transactionNumber: json['transaction_number'] as String?,
   );
 
   bool get isDuplicate => duplicateOfId != null;
