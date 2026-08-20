@@ -11,9 +11,88 @@ Removed in that pass: the invented basket-savings headline on Home and Insights,
 
 Real receipt photographs now render, authenticated, via `MobileApi.receiptImageUrl` + `imageHeaders` (previously written but never called), addressed as `/receipts/:id/photo` with per-page navigation.
 
-Verified: `flutter analyze` clean, **47 Flutter tests pass** (was 30 passing / 14 failing after the fixtures were pulled out; the 6 Welcome goldens that had been failing since 20 August are fixed at the cause — a third CTA added without its sibling spacing, clipping the body — not re-baselined around).
+Verified: `flutter analyze` clean, **48 Flutter tests pass** (was 30 passing / 14 failing after the fixtures were pulled out; the 6 Welcome goldens that had been failing since 20 August are fixed at the cause — a third CTA added without its sibling spacing, clipping the body — not re-baselined around), **79 backend tests pass** (was 77).
 
-Still outstanding before release: the route guard and session restore, host-side receipt delete, receipt detail wiring (line items, tax, balance, warnings, duplicate state and the missing-date outcome all still dropped by `toDomainReceipt`), hosted identity and households, live comparison evidence, HTTPS-only manifest, real release signing, and physical-device validation.
+## Front door and household flow — 20 August 2026
+
+The product no longer asks anyone for a host address or a PIN.
+
+- [x] Service URL is build-time config (`lib/core/config/app_config.dart`, `--dart-define=RECEIPTS_HUB_API_BASE_URL`).
+- [x] Real account front door at `/create-account` and `/sign-in` (`lib/features/auth/`), with validation, password reveal, and reset request. Welcome's two CTAs used to open the same host-and-PIN screen.
+- [x] Household step at `/household` (`lib/features/household/household_choice_screen.dart`): create one, join one that exists, or open an existing membership. Auth lands here, not in the ledger — an account is not a ledger.
+- [x] Joining is a request, not access: pending requests render as pending with a withdraw action, and `/household/join` calls the service instead of a 450 ms `Future.delayed`.
+- [x] Capture refuses to open the camera without a household (`capture-needs-household`), because a receipt has to be filed into one.
+- [x] Host-and-PIN moved to `/developer/connection`, reachable only from a debug build via `developerToolsProvider`; compiled out of release by `kDebugMode` and switchable off by `AppConfig.allowHostOverride`.
+- [x] Removed the duplicate `/household/members` route registration.
+
+## Section A — review reads server truth — 20 August 2026
+
+- [x] `ReceiptViewScreen` and `ReceiptEditScreen` read full detail (`receiptWithDetailProvider`), not the list summary. Every live receipt used to render "No line items were read.", `$0.00` tax and no reference.
+- [x] Domain models carry what the service sends: `LineItem.unit/needsReview/category`, `Receipt.dated/warnings/duplicateOfId/serverBalanceDifferenceCents/detailLoaded`.
+- [x] The missing-date outcome is renderable at last — `toDomainReceipt` used to substitute today's date, so the interface could not tell a date was absent.
+- [x] Per-line OCR uncertainty shown inline ("Check this line"), not in a `Tooltip` unreachable on touch.
+- [x] Server warnings, duplicate notice and server-computed balance surfaced.
+- [x] Date and time are pickers. Free text was parsed strictly with a silent fallback, so `15/08/2026` reverted the date with no message.
+- [x] Money fields refuse unparseable input. `1.2.3` used to file `$0.00`.
+- [x] Filing keeps each line's unit instead of rewriting every line to `each`.
+- [x] `DELETE /api/v1/receipts/{id}` added; the client awaits it and rolls back on failure. "Receipt deleted" was false and the row returned on refresh.
+- [x] Un-ticking a shopping item works — the client sent `status: completed` unconditionally.
+- [x] Upload polling has a 3-minute budget and a cancel; it used to reschedule forever against an unreachable service.
+- [x] `collection_id` is derived from line-item categories (`services.receipt_collection`). It was hardcoded `None`, so every live receipt was permanently "Unfiled" and Collections could never populate.
+- [x] The edit draft is a `Notifier` that reads its seed once, so a background refresh no longer discards edits in progress.
+
+## NEXT SESSION — section B: flow integrity
+
+Flutter only; no backend dependency except where noted.
+
+- [ ] **Route guard and splash.** `createAppRouter` has no `redirect`, so a deep link skips both auth and the household step. `AppState.onboardingComplete` is written four times and read nowhere. Add a splash while `restoreSession()` resolves, and route signed-in-but-no-household to `/household`. Note: the developer PIN path sets `connected` directly and must keep working.
+- [ ] **Household approval screen.** `/household/members` is still orphaned with a hardcoded `['Alex Morgan']`, so nobody can approve the join requests the app now sends. Promote `lib/ui_ux_revision/` to `lib/features/household/`, drop the `Mvp` class prefixes, and wire approve/decline/revoke with the requester's identity and requested role. Needs the endpoints in section C.
+- [ ] **Unsaved-changes guards.** Zero `PopScope` in `lib/`. Editing a receipt and pressing back discards silently; the line-item sheet is drag-dismissible with the same effect.
+- [ ] **Capture tray.** No page thumbnails, no reorder, no per-page remove — only a "Page N" chip with a sub-44px "Clear" that wipes every page with no undo. `AppController.removeCapturePage` and `moveCapturePage` already exist and are unused. Add a pre-upload confirmation.
+- [ ] **"Open settings" doesn't open settings** (`capture_screens.dart`, `_CameraDeniedPanel`) — it just retries the camera. Needs `permission_handler`.
+- [ ] **Receipts list at scale.** No pagination, so receipt 51+ is invisible; `listReceipts(limit, offset)` already supports it. Debounce the search (every keystroke writes global state), add a clear affordance, pass `attentionOnly` to the service instead of filtering 50 client-side rows, and reconcile the two counts that disagree.
+- [ ] **Nothing persists.** `shared_preferences` and `connectivity_plus` are in `pubspec.yaml` and never imported: theme, colourway and prefs reset every launch, and offline is never detected. Either apply `largerText` via `MediaQuery.textScaler` in `lib/app.dart` or delete the switch.
+- [ ] **One currency formatter.** `formatCents` (grouped, intl) and `money` (`price_comparison.dart:106`, ungrouped) render on the same card and disagree above $1,000.
+- [ ] **Shopping suggestions** are fetched into `AppState.suggestions` and never rendered; `acceptSuggestion`/`dismissSuggestion` exist. Show the `409 VERSION_CONFLICT` recovery copy too.
+- [ ] Fix the shell safe-area double inset: the offline banner sits under the status bar and each child `Scaffold`+`AppBar` adds a second inset (`app_shell.dart`).
+- [ ] Surface `isLoading`/`failureMessage` on the remaining screens and finish `RefreshIndicator` coverage.
+
+## NEXT SESSION — section C: hosted identity, tenancy, comparison
+
+The largest block, and it gates the front door: until auth lands, the account
+flow cannot complete and the developer PIN path is the only way in. Security
+surface, so it needs tests, not just routes. Design already written in
+[multi-user architecture](docs/multi-user-architecture.md).
+
+- [ ] `users`, `household_memberships`, `household_join_requests` tables plus migrations; roles `owner`/`admin`/`member`/`viewer`.
+- [ ] Relax `CheckConstraint id = 1` on `households` — it is a singleton today.
+- [ ] `POST /api/v1/auth/register | login | refresh | verify-email | reset-password`, and `DELETE /api/v1/auth/account`.
+- [ ] `GET/POST /api/v1/households`, `POST|DELETE .../join-requests`, `GET .../members`, `POST .../join-requests/{id}/approve|decline`, `DELETE .../members/{id}`. The Flutter client already calls these shapes (`MobileApi.households`, `createHousehold`, `requestToJoinHousehold`, `cancelJoinRequest`).
+- [ ] Scope **every** household read server-side. Add a cross-tenant denial test: a member of household A must not read household B.
+- [ ] HTTPS + Postgres + private object storage for receipt images.
+- [ ] Comparison evidence: merchant metadata, pack sizes, provenance, freshness, confidence, price bands, outliers, multi-retailer coverage. Then `GET /api/v1/rivals`, `/items/{product_key}`, `/shopping/quotes`. `PriceVerdict`, `MerchantComparison` and `RivalsResponse` already exist in `api_schemas.py` with no routes.
+- [ ] Bind `comparisonBasketProvider` to those endpoints. The engine at `lib/core/pricing/price_comparison.dart` and its 16 invariant tests are correct — only the data source changes. The seven invariants must survive.
+
+## NEXT SESSION — section D: commercial release
+
+- [ ] Remove `android:usesCleartextTraffic="true"` from the manifest; HTTPS only.
+- [ ] Real release signing — `android/app/build.gradle.kts` still uses `signingConfigs.getByName("debug")`. **Needs you:** you must own the keystore, and its passwords must not enter this public repo. Wire Gradle to read `key.properties`/env and keep it ignored.
+- [ ] `https://` App Links, so email verification and password-reset links open the app. **Needs you:** a domain and a hosted `assetlinks.json`.
+- [ ] Account deletion and data export (both absent; `grep -r "export\|csv\|Share" lib/` returns nothing). Depends on the section C endpoints.
+- [ ] Privacy policy and terms links. **Needs you:** legal review — not text to invent.
+- [ ] Crash and error reporting. **Needs you:** a provider account/DSN.
+- [ ] Rate limiting and abuse protection on the new auth routes.
+- [ ] Decide the launch market: currency is hard-locked to `en_AU` (`app_components.dart`, `prefixText: r'$ '` in three places) and every `DateFormat` call omits a locale, so dates render `en_US` regardless of device. Fine for an AU-only launch — state it rather than discover it.
+
+## NEXT SESSION — open decisions
+
+- [ ] **Merge Home and Insights?** They are ~70% the same screen — both render month total, delta, six-month chart and collections. Merging frees the nav slot Account currently lacks (Account is reachable only from Home's app-bar icon, and `AppShell._selectedIndex` returns 0 for `/account`, `/collections` and `/household`).
+- [ ] **Should `analysis/` and `parsed/` be published?** Both are git-ignored right now because this repo is public and they are derived from 103 real receipts (752 line items, association rules, spend statistics). Un-ignore only deliberately.
+- [ ] Still deferred by choice: `LedgerScaffold`, `PriceVerdict` and `ItemMark` from `.interface-design/system.md` are specified but absent; the four near-identical list rows (min-heights 76/72/64/56) are not consolidated; full localisation is out.
+
+## Physical-device validation — the one thing left by design
+
+- [ ] Run the capture-to-ledger script on a physical Android phone: install → sign in → choose household → multi-page capture → upload → OCR → retry/manual fallback → review → file → Home/Receipts/Insights/List. Then repeat with TalkBack and large text on a 320–360 dp device. The script in [the MVP UI/UX plan](docs/mvp-ui-ux-plan.md) has duplicated step numbers (steps 4–8 collide with 6–8) and needs renumbering.
 
 See [MVP release checklist](docs/mvp-release-checklist.md) for the exact handoff and backup procedure.
 
