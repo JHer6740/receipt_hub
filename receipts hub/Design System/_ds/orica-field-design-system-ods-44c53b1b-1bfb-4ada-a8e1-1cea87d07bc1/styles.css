@@ -1,0 +1,9 @@
+/* ============================================================
+   Orica Field Design System (ODS) — global stylesheet entry.
+   Consumers link THIS file. Imports only — no rules inline here.
+   ============================================================ */
+@import "./tokens/fig-tokens.css";   /* Figma Variables: palette, semantic colors, breakpoints */
+@import "./tokens/fonts.css";         /* @font-face — Noto Sans */
+@import "./tokens/typography.css";    /* type scale + utility classes */
+@import "./tokens/spacing.css";       /* spacing, radii, elevation */
+@import "./tokens/base.css";          /* document + link defaults */

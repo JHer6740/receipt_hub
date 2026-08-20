@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Add a receipt · Grocery Home{% endblock %}
+{% block content %}
+<header class="page-heading compact-heading">
+  <div>
+    <p class="eyebrow">Household inbox</p>
+    <h1>Add a receipt.</h1>
+    <p>Take a clear photo or choose an eReceipt. Photos stay on this computer.</p>
+  </div>
+</header>
+
+<section class="upload-workbench">
+  <form id="receipt-upload-form" method="post" action="/upload" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="receipt-dropzone" for="receipt-files">
+      <input id="receipt-files" name="files" type="file"
+             accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,image/*,application/pdf"
+             capture="environment" multiple required aria-describedby="receipt-file-limits">
+      <span class="dropzone-icon" aria-hidden="true">
+        <svg viewBox="0 0 56 56"><path d="M11 10h34v36H11z"/><path d="M20 25h16M20 32h11"/><path class="accent" d="M28 4v14M21 11h14"/></svg>
+      </span>
+      <strong>Take a photo or choose files</strong>
+      <span>PDF, JPEG, PNG, WebP or HEIC</span>
+      <small id="receipt-file-limits">Up to 5 photos or a 10-page PDF · 20 MB each</small>
+      <span class="perforated-edge" aria-hidden="true"></span>
+    </label>
+
+    <div id="selected-files" class="selected-files" role="list" aria-label="Selected receipt files" aria-live="polite"></div>
+
+    <div class="photo-guidance">
+      <div>
+        <span class="guidance-number">1</span>
+        <p><strong>Lay it flat</strong><br>Keep the whole receipt inside the frame.</p>
+      </div>
+      <div>
+        <span class="guidance-number">2</span>
+        <p><strong>Use even light</strong><br>Avoid shadows across item prices.</p>
+      </div>
+      <div>
+        <span class="guidance-number">3</span>
+        <p><strong>Check the result</strong><br>Photos always open for a quick review.</p>
+      </div>
+    </div>
+
+    <button id="upload-submit" class="button button-primary button-wide" type="submit" disabled>
+      Start reading receipt
+    </button>
+  </form>
+
+  <aside class="privacy-card">
+    <p class="eyebrow">What happens next</p>
+    <ol>
+      <li><span>01</span><p>The file is checked and stored under a private generated name.</p></li>
+      <li><span>02</span><p>Local OCR reads photos; text eReceipts use the Woolworths parser.</p></li>
+      <li><span>03</span><p>You confirm the items before they change household totals.</p></li>
+    </ol>
+    <p class="small-print">Only product descriptions are sent outside this computer during the separate weekly Woolworths price check.</p>
+  </aside>
+</section>
+{% endblock %}

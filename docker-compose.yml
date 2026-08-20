@@ -1,0 +1,94 @@
+version: '3.9'
+
+services:
+  # FastAPI backend serving both web UI (Jinja) and /api/v1 JSON
+  fastapi:
+    build:
+      context: "./receipts - grocery home"
+      dockerfile: Dockerfile
+    container_name: receipts-hub-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persistent data: SQLite database, receipt images, backups
+      - receipts_data:/app/data
+      # Optional: mount for development (uncomment for hot reload)
+      # - ./receipts\ -\ grocery\ home:/app
+    environment:
+      # Set these via .env or docker-compose.override.yml
+      GROCERY_HOME_DATA_DIR: /app/data
+      GROCERY_HOME_HOST: 0.0.0.0
+      GROCERY_HOME_PORT: 8000
+      # GROCERY_HOME_HOUSEHOLD_PIN: "1234"  # Set at runtime or via setup
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8000/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - receipts_hub
+
+  # Optional: Nginx reverse proxy for better LAN access (commented for MVP)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: receipts-hub-proxy
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - fastapi
+  #   networks:
+  #     - receipts_hub
+  #   healthcheck:
+  #     test:
+  #       - CMD
+  #       - wget
+  #       - --quiet
+  #       - --tries=1
+  #       - --spider
+  #       - http://localhost:80/health
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+volumes:
+  receipts_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "./receipts - grocery home/data"
+
+networks:
+  receipts_hub:
+    driver: bridge
+
+# Usage:
+#
+# 1. Initial setup (one-time):
+#    docker-compose run -e GROCERY_HOME_SETUP=true fastapi
+#
+# 2. Start the stack:
+#    docker-compose up -d
+#
+# 3. Stop the stack:
+#    docker-compose down
+#
+# 4. View logs:
+#    docker-compose logs -f fastapi
+#
+# 5. Access:
+#    Web UI: http://localhost:8000
+#    API docs: http://localhost:8000/docs
+#    Health: http://localhost:8000/health
+#
+# 6. Override for development:
+#    Create docker-compose.override.yml with volumes, environment overrides
+#    (not tracked in git)

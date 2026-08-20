@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ receipt.merchant_name }} receipt · Grocery Home{% endblock %}
+{% block content %}
+<header class="page-heading compact-heading with-action">
+  <div>
+    <p class="eyebrow">{{ receipt.purchase_date_label }}</p>
+    <h1>{{ receipt.merchant_name }}.</h1>
+    <p>{{ receipt.filename }}</p>
+  </div>
+  {% if receipt.can_review %}
+  <a class="button button-primary" href="/receipts/{{ receipt.id }}/review">Review receipt</a>
+  {% elif receipt.can_edit %}
+  <a class="button button-primary" href="/receipts/{{ receipt.id }}/review">Edit receipt</a>
+  {% else %}
+  <span class="status-badge status-{{ receipt.status_tone }}">{{ receipt.status_label }}</span>
+  {% endif %}
+</header>
+
+<div class="detail-layout">
+  <section class="detail-total receipt-paper">
+    <div>
+      <span>Total paid</span>
+      <strong>{{ receipt.total }}</strong>
+    </div>
+    <dl>
+      <div><dt>Items</dt><dd>{{ receipt.item_count }}</dd></div>
+      <div><dt>GST</dt><dd>{{ receipt.gst }}</dd></div>
+      <div><dt>Savings</dt><dd>{{ receipt.savings }}</dd></div>
+      <div><dt>Transaction</dt><dd>{{ receipt.transaction_number|default('—') }}</dd></div>
+    </dl>
+    {% if not receipt.is_grocery %}<p class="exclusion-note">This receipt is kept in the archive but excluded from grocery totals.</p>{% endif %}
+    <span class="perforated-edge" aria-hidden="true"></span>
+  </section>
+
+  <section class="ledger-section itemised-section">
+    <div class="section-heading">
+      <div><p class="eyebrow">Itemised receipt</p><h2>What was bought</h2></div>
+      <a class="text-link" href="/receipts/{{ receipt.id }}/preview" target="_blank" rel="noopener">View original</a>
+    </div>
+    <div class="itemised-list">
+      {% for item in receipt["items"] %}
+      <div>
+        <span class="itemised-qty">{{ item.quantity_label }}</span>
+        <span><strong>{{ item.description }}</strong><small>{{ item.category }}</small></span>
+        <strong>{{ item.line_total }}</strong>
+      </div>
+      {% endfor %}
+      {% if not receipt["items"] %}<p class="empty-state">No line items saved.</p>{% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

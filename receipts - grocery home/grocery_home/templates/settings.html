@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Settings · Grocery Home{% endblock %}
+{% block content %}
+<header class="page-heading compact-heading">
+  <div>
+    <p class="eyebrow">Household setup</p>
+    <h1>Settings.</h1>
+    <p>Access, local storage and the weekly price check.</p>
+  </div>
+</header>
+
+<div class="settings-layout">
+  <section class="settings-section" aria-labelledby="household-settings-title">
+    <div>
+      <p class="eyebrow">Identity</p>
+      <h2 id="household-settings-title">Household</h2>
+      <p>This name appears on the private login screen and exported backups.</p>
+    </div>
+    <form method="post" action="/settings/household" class="settings-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="field"><span>Household name</span><input name="household_name" value="{{ settings.household_name }}" maxlength="80" required></label>
+      <label class="field"><span>Timezone</span><input value="Australia/Sydney" disabled><small>Fixed for forecasts and weekly schedules in v1.</small></label>
+      <button class="button button-secondary" type="submit">Save household</button>
+    </form>
+  </section>
+
+  <section class="settings-section" aria-labelledby="pin-settings-title">
+    <div>
+      <p class="eyebrow">Access</p>
+      <h2 id="pin-settings-title">Household PIN</h2>
+      <p>Use one shared PIN on every family phone. PIN attempts are throttled.</p>
+    </div>
+    <form method="post" action="/settings/pin" class="settings-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="field"><span>Current PIN</span><input name="current_pin" type="password" inputmode="numeric" autocomplete="current-password" required></label>
+      <label class="field"><span>New PIN</span><input name="new_pin" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="64" required></label>
+      <button class="button button-secondary" type="submit">Change PIN</button>
+    </form>
+  </section>
+
+  <section class="settings-section" aria-labelledby="price-settings-title">
+    <div>
+      <p class="eyebrow">Costs</p>
+      <h2 id="price-settings-title">Weekly price check</h2>
+      <p>Checks active and needed products against Woolworths each Sunday after 3:00 am.</p>
+    </div>
+    <div class="settings-form">
+      <dl class="settings-facts">
+        <div><dt>Last run</dt><dd>{{ settings.price_last_run }}</dd></div>
+        <div><dt>Next due</dt><dd>{{ settings.price_next_run }}</dd></div>
+        <div><dt>Last result</dt><dd>{{ settings.price_last_result }}</dd></div>
+      </dl>
+      <form method="post" action="/settings/prices/refresh">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button button-secondary" type="submit">Run price check now</button>
+      </form>
+      <p class="small-print">This uses an unofficial Woolworths endpoint and may occasionally be unavailable. Last successful prices remain visible.</p>
+    </div>
+  </section>
+
+  <section class="settings-section" aria-labelledby="data-settings-title">
+    <div>
+      <p class="eyebrow">Local records</p>
+      <h2 id="data-settings-title">Data and backups</h2>
+      <p>New uploads and the database live outside OneDrive in your local app-data folder.</p>
+    </div>
+    <div class="settings-form">
+      <dl class="settings-facts">
+        <div><dt>Data folder</dt><dd class="path-value">{{ settings.data_dir }}</dd></div>
+        <div><dt>Uploads</dt><dd>{{ settings.upload_count }}</dd></div>
+        <div><dt>Database size</dt><dd>{{ settings.database_size }}</dd></div>
+      </dl>
+      <div class="button-row">
+        <a class="button button-secondary" href="/settings/export.csv">Export CSV</a>
+        <form method="post" action="/settings/backup">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button button-secondary" type="submit">Create backup</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="settings-section settings-signout">
+    <div><p class="eyebrow">This device</p><h2>Lock Grocery Home</h2></div>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button button-secondary" type="submit">Lock and sign out</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

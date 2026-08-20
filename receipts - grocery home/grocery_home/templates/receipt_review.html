@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Review receipt · Grocery Home{% endblock %}
+{% block content %}
+<header class="page-heading compact-heading review-heading">
+  <div>
+    <p class="eyebrow">Check before filing</p>
+    <h1>Review receipt.</h1>
+    <p>Correct anything the local reader missed. Nothing counts toward trends until you confirm.</p>
+  </div>
+  <span class="status-badge status-warning">{{ receipt.status_label }}</span>
+</header>
+
+{% if receipt.warnings %}
+<div class="review-warning" role="status" aria-labelledby="review-warning-title">
+  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19z"/><path d="M12 9v5M12 17.5v.5"/></svg>
+  <div>
+    <strong id="review-warning-title">Please check {{ receipt.warnings|length }} detail{% if receipt.warnings|length != 1 %}s{% endif %}</strong>
+    <ul>{% for warning in receipt.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endif %}
+
+<form method="post" action="/receipts/{{ receipt.id }}/review" class="review-layout" data-review-form>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <aside class="receipt-preview-panel">
+    <div class="preview-toolbar">
+      <span>Original receipt</span>
+      <a href="/receipts/{{ receipt.id }}/preview" target="_blank" rel="noopener">Open full size</a>
+    </div>
+    {% if receipt.preview_kind == 'image' %}
+    <img class="receipt-preview" src="/receipts/{{ receipt.id }}/preview" alt="Uploaded receipt awaiting review">
+    {% else %}
+    <object class="receipt-preview receipt-pdf" data="/receipts/{{ receipt.id }}/preview"
+            type="application/pdf" aria-label="Original receipt PDF">
+      <a class="text-link" href="/receipts/{{ receipt.id }}/preview">Open the uploaded PDF</a>
+    </object>
+    {% endif %}
+  </aside>
+
+  <div class="review-sheet">
+    <section class="review-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Receipt header</p>
+          <h2>Shop and totals</h2>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label class="field field-wide">
+          <span>Store</span>
+          <input name="merchant_name" value="{{ receipt.merchant_name }}" required>
+        </label>
+        <label class="field">
+          <span>Purchase date</span>
+          <input name="purchase_date" type="date" value="{{ receipt.purchase_date }}" required>
+        </label>
+        <label class="field">
+          <span>Purchase time</span>
+          <input name="purchase_time" type="time" value="{{ receipt.purchase_time }}">
+        </label>
+        <label class="field money-field">
+          <span>Subtotal</span>
+          <span class="input-prefix">$</span>
+          <input name="subtotal" inputmode="decimal" value="{{ receipt.subtotal }}">
+        </label>
+        <label class="field money-field">
+          <span>Total</span>
+          <span class="input-prefix">$</span>
+          <input name="total" inputmode="decimal" value="{{ receipt.total }}" required data-receipt-total>
+        </label>
+        <label class="field money-field">
+          <span>GST</span>
+          <span class="input-prefix">$</span>
+          <input name="gst" inputmode="decimal" value="{{ receipt.gst }}">
+        </label>
+        <label class="field money-field">
+          <span>Savings</span>
+          <span class="input-prefix">$</span>
+          <input name="savings" inputmode="decimal" value="{{ receipt.savings }}">
+        </label>
+      </div>
+      <label class="switch-row">
+        <input name="is_grocery" type="checkbox" value="true" {% if receipt.is_grocery %}checked{% endif %}>
+        <span aria-hidden="true"></span>
+        <span><strong>Count this as groceries</strong><small>Turn this off for clothing, homewares or other non-grocery purchases.</small></span>
+      </label>
+    </section>
+
+    <section class="review-section">
+      <div class="section-heading item-heading">
+        <div>
+          <p class="eyebrow">Line items</p>
+          <h2>What was bought</h2>
+        </div>
+        <button class="button button-secondary button-small" type="button" data-add-item>Add item</button>
+      </div>
+      <div class="item-balance" data-item-balance role="status" aria-live="polite" aria-atomic="true">
+        <span>Items total</span><strong>$0.00</strong><small></small>
+      </div>
+
+      <div class="review-items" data-review-items>
+        {% for item in receipt["items"] %}
+        <div class="review-item" data-review-item>
+          <span class="item-number" aria-hidden="true">{{ loop.index }}</span>
+          <label class="field item-description">
+            <span>Description</span>
+            <input name="item_description" value="{{ item.description }}" required>
+          </label>
+          <label class="field item-quantity">
+            <span>Qty</span>
+            <input name="item_quantity" inputmode="decimal" value="{{ item.quantity }}" required>
+          </label>
+          <label class="field item-unit">
+            <span>Unit</span>
+            <select name="item_unit">
+              {% for unit in ['each', 'kg', 'g', 'L', 'mL', 'pack'] %}
+              <option value="{{ unit }}" {% if item.unit == unit %}selected{% endif %}>{{ unit }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field money-field item-price">
+            <span>Line total</span>
+            <span class="input-prefix">$</span>
+            <input name="item_total" inputmode="decimal" value="{{ item.line_total }}" required data-item-total>
+          </label>
+          <label class="field item-category">
+            <span>Category</span>
+            <input name="item_category" value="{{ item.category }}" list="category-options">
+          </label>
+          <input name="item_product_number" type="hidden" value="{{ item.product_number }}">
+          <button class="icon-button remove-item" type="button" data-remove-item aria-label="Remove {{ item.description }}">×</button>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="empty-state" data-items-empty {% if receipt["items"] %}hidden{% endif %}>No line items. Use “Add item” to create one.</p>
+      <datalist id="category-options">
+        {% for category in categories %}<option value="{{ category }}">{% endfor %}
+      </datalist>
+    </section>
+
+    <div class="review-actions">
+      <a class="button button-secondary" href="/receipts">Finish later</a>
+      <button class="button button-primary" type="submit">Confirm and update household</button>
+    </div>
+  </div>
+</form>
+
+<template id="review-item-template">
+  <div class="review-item" data-review-item>
+    <span class="item-number" aria-hidden="true"></span>
+    <label class="field item-description"><span>Description</span><input name="item_description" required></label>
+    <label class="field item-quantity"><span>Qty</span><input name="item_quantity" inputmode="decimal" value="1" required></label>
+    <label class="field item-unit"><span>Unit</span><select name="item_unit"><option>each</option><option>kg</option><option>g</option><option>L</option><option>mL</option><option>pack</option></select></label>
+    <label class="field money-field item-price"><span>Line total</span><span class="input-prefix">$</span><input name="item_total" inputmode="decimal" value="0.00" required data-item-total></label>
+    <label class="field item-category"><span>Category</span><input name="item_category" value="unmapped" list="category-options"></label>
+    <input name="item_product_number" type="hidden" value="">
+    <button class="icon-button remove-item" type="button" data-remove-item aria-label="Remove item">×</button>
+  </div>
+</template>
+{% endblock %}

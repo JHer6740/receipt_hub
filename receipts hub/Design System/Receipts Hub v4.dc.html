@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/fig-tokens.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/typography.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/base.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/styles.css">
+<script src="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/_ds_bundle.js"></script>
+<link rel="stylesheet" href="_ds/organic-992f14b4-4a31-48ce-85a2-50be1e927417/styles.css">
+<script src="_ds/organic-992f14b4-4a31-48ce-85a2-50be1e927417/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#e6dcc9;font-family:"Noto Sans",system-ui,sans-serif}
+a{color:var(--primary-main)}a:hover{color:var(--primary-dark)}
+.disp{font-family:var(--font-heading),"Noto Sans",serif;font-weight:400;letter-spacing:-.01em}
+.cw-sage{--background-default:#f5ead8;--background-paper-elevation-1:#fdf8ee;--divider:rgba(32,30,29,.14);--text-primary:#201e1d;--text-secondary:#6f6455;--action-hover:rgba(32,30,29,.05);--action-selected:rgba(32,30,29,.07);--primary-main:#5f6f47;--primary-contrast:#fdf8ee;--error-main:#a8432f;--gh-warn-bg:#f2e2cd;--gh-warn-fg:#5c3a17;--gh-input-bd:rgba(32,30,29,.22)}
+.cw-sage.dark{--background-default:#1c1813;--background-paper-elevation-1:#272118;--text-primary:#f1e8d8;--text-secondary:rgba(241,232,216,.68);--divider:rgba(241,232,216,.16);--action-hover:rgba(241,232,216,.06);--action-selected:rgba(241,232,216,.08);--primary-main:#a2b47f;--primary-contrast:#1c1813;--error-main:#e0917d;--gh-warn-bg:#3b2a1c;--gh-warn-fg:#f0c99f;--gh-input-bd:rgba(241,232,216,.26)}
+.cw-clay{--background-default:#f7ecdc;--background-paper-elevation-1:#fffaf3;--divider:rgba(58,38,24,.14);--text-primary:#2b1f16;--text-secondary:#7d6552;--action-hover:rgba(58,38,24,.05);--action-selected:rgba(58,38,24,.07);--primary-main:#b4602c;--primary-contrast:#fffaf3;--error-main:#9d3423;--gh-warn-bg:#ecdcc4;--gh-warn-fg:#5a3512;--gh-input-bd:rgba(58,38,24,.22)}
+.cw-clay.dark{--background-default:#1e1712;--background-paper-elevation-1:#2b211a;--text-primary:#f4e7d8;--text-secondary:rgba(244,231,216,.66);--divider:rgba(244,231,216,.16);--action-hover:rgba(244,231,216,.06);--action-selected:rgba(244,231,216,.08);--primary-main:#e09257;--primary-contrast:#1e1712;--error-main:#e08d78;--gh-warn-bg:#3d2a1c;--gh-warn-fg:#f2cca9;--gh-input-bd:rgba(244,231,216,.26)}
+.cw-olive{--background-default:#f4f1e6;--background-paper-elevation-1:#fdfcf7;--divider:rgba(30,34,26,.13);--text-primary:#1e221a;--text-secondary:#6b7062;--action-hover:rgba(30,34,26,.05);--action-selected:rgba(30,34,26,.07);--primary-main:#3d4a2f;--primary-contrast:#fdfcf7;--error-main:#8e3a2a;--gh-warn-bg:#e8e3cf;--gh-warn-fg:#4a3c1c;--gh-input-bd:rgba(30,34,26,.2)}
+.cw-olive.dark{--background-default:#16180f;--background-paper-elevation-1:#212418;--text-primary:#eceadb;--text-secondary:rgba(236,234,219,.66);--divider:rgba(236,234,219,.15);--action-hover:rgba(236,234,219,.06);--action-selected:rgba(236,234,219,.08);--primary-main:#b6c78e;--primary-contrast:#16180f;--error-main:#dc8f7a;--gh-warn-bg:#33301d;--gh-warn-fg:#e2dcae;--gh-input-bd:rgba(236,234,219,.24)}
+.s::-webkit-scrollbar{width:0;height:0}.s{scrollbar-width:none}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes sweep{0%{transform:translateY(-40%)}100%{transform:translateY(340%)}}
+@keyframes tilt{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.4deg)}}
+@keyframes reveal{0%{opacity:.18}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:48px;display:flex;gap:40px;align-items:flex-start;font-family:'Noto Sans',system-ui,sans-serif;color:#302b23">
+
+<aside style="width:180px;flex:none;position:sticky;top:48px">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:#7c7263;margin:0 8px 8px">Screens</div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ rail }}" as="r" hint-placeholder-count="10">
+<button onClick="{{ r.go }}" style="display:flex;align-items:center;width:100%;min-height:36px;padding:8px;border:0;border-radius:4px;background:{{ r.bg }};color:{{ r.fg }};font:inherit;font-size:14px;font-weight:{{ r.weight }};text-align:left;cursor:pointer" style-hover="background:rgba(32,30,29,.06)">{{ r.label }}</button>
+</sc-for>
+</div>
+<div style="height:1px;background:rgba(32,30,29,.14);margin:24px 8px"></div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:#7c7263;margin:0 8px 8px">States</div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ stateRail }}" as="r" hint-placeholder-count="5">
+<button onClick="{{ r.go }}" style="display:flex;align-items:center;width:100%;min-height:36px;padding:8px;border:0;border-radius:4px;background:transparent;color:#7c7263;font:inherit;font-size:14px;text-align:left;cursor:pointer" style-hover="background:rgba(32,30,29,.06)">{{ r.label }}</button>
+</sc-for>
+</div>
+<div style="height:1px;background:rgba(32,30,29,.14);margin:24px 8px"></div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:#7c7263;margin:0 8px 8px">Colourway</div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ cwOptions }}" as="c" hint-placeholder-count="3">
+<button onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:8px;border:0;border-radius:4px;background:{{ c.bg }};color:#302b23;font:inherit;font-size:14px;font-weight:{{ c.weight }};text-align:left;cursor:pointer" style-hover="background:rgba(32,30,29,.06)">
+<span style="width:32px;height:18px;flex:none;border-radius:999px;background:{{ c.ground }};border:1px solid rgba(32,30,29,.14);position:relative;display:inline-block">
+<span style="position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:{{ c.accent }}"></span>
+<span style="position:absolute;top:2px;right:2px;width:13px;height:13px;border-radius:50%;background:{{ c.accent2 }}"></span>
+</span>
+<span>{{ c.label }}</span>
+</button>
+</sc-for>
+</div>
+<button onClick="{{ toggleTheme }}" style="display:flex;align-items:center;width:100%;min-height:36px;margin-top:16px;padding:8px;border:0;border-radius:4px;background:transparent;color:#5f6f47;font:inherit;font-size:14px;font-weight:500;text-align:left;cursor:pointer" style-hover="background:rgba(95,111,71,.1)">{{ themeLabel }}</button>
+</aside>
+
+<div style="flex:none;width:390px;height:844px;border-radius:34px;padding:9px;background:#332c22;box-shadow:0 18px 44px rgba(46,43,37,.28)">
+<div class="phone {{ cwClass }} {{ themeClass }}" style="width:100%;height:100%;border-radius:26px;overflow:hidden;position:relative;display:flex;flex-direction:column;background:var(--background-default);color:var(--text-primary)">
+
+<div style="height:36px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--text-secondary)">
+<span>4:12</span>
+<span>{{ networkLabel }}</span>
+</div>
+
+<div class="s" style="flex:1;overflow-y:auto">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 0 32px">
+<div style="padding:0 24px">
+<div style="display:flex;align-items:center;justify-content:space-between;height:56px">
+<span class="disp" style="font-size:23px">Receipts Hub</span>
+<button onClick="{{ goAccount }}" aria-label="Account" style="width:44px;height:44px;margin-right:-10px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="background:var(--action-hover)">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+</button>
+</div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin-top:12px">July</div>
+<div class="disp" style="font-size:42px;line-height:1.15;font-variant-numeric:tabular-nums;margin-top:8px">{{ monthTotal }}</div>
+<div style="font-size:14px;color:var(--text-secondary);margin-top:4px;font-variant-numeric:tabular-nums">{{ monthMeta }}</div>
+<sc-if value="{{ hasAttention }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ goAttention }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;margin-top:24px;padding:14px 16px;border:0;border-radius:16px;background:var(--gh-warn-bg);color:var(--gh-warn-fg);font:inherit;font-size:14px;text-align:left;cursor:pointer">
+<span style="flex:1">{{ attentionLabel }}</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex:none;opacity:.7"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"></path></svg>
+</button>
+</sc-if>
+</div>
+<div style="margin:28px 0 -32px;padding:20px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:430px">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary)">Collections</div>
+<sc-for list="{{ collections }}" as="c" hint-placeholder-count="6">
+<button onClick="{{ c.open }}" style="display:flex;align-items:baseline;gap:12px;width:100%;min-height:56px;padding:15px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">{{ c.name }}</span>
+<span style="font-variant-numeric:tabular-nums">{{ c.amount }}</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex:none;color:var(--text-secondary)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"></path></svg>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCapture }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#221d16;color:#f2ead9">
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 8px">
+<button onClick="{{ goHome }}" aria-label="Cancel" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+<span style="font-size:16px;font-weight:500">Scan receipt</span>
+<span style="width:44px"></span>
+</div>
+<sc-if value="{{ camDenied }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:32px">
+<div class="disp" style="font-size:22px">Camera access is off</div>
+<p style="font-size:14px;line-height:1.5;color:rgba(242,234,217,.7);margin:0">Receipts are read on this device. Nothing is uploaded.</p>
+<button onClick="{{ grantCam }}" style="min-height:48px;margin-top:8px;border-radius:999px;border:0;background:{{ camAccent }};color:{{ camAccentFg }};font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Open settings</button>
+<button onClick="{{ importPhoto }}" style="min-height:48px;border-radius:999px;border:1px solid rgba(242,234,217,.4);background:transparent;color:#f2ead9;font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Import from gallery</button>
+</div>
+</sc-if>
+<sc-if value="{{ camOk }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;position:relative;margin:0 16px;border-radius:8px;overflow:hidden;background:#2b251c">
+<div style="position:absolute;inset:0;display:grid;place-items:center">
+<div style="width:60%;height:84%;background:#fff;padding:16px 14px;font-family:ui-monospace,monospace;font-size:8px;line-height:2;color:#191c20;overflow:hidden">
+<sc-for list="{{ viewfinderLines }}" as="l" hint-placeholder-count="11"><div>{{ l }}</div></sc-for>
+</div>
+</div>
+<div style="position:absolute;inset:24px 32px;border:2px solid {{ camAccent }};border-radius:4px;box-shadow:0 0 0 9999px rgba(25,28,32,.55)"></div>
+<sc-if value="{{ hasPages }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:16px;bottom:16px;display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:999px;background:rgba(25,28,32,.72);font-size:12px;color:#f2ead9">
+<span>{{ pageLabel }}</span>
+<button onClick="{{ clearPages }}" style="min-height:28px;padding:0 4px;border:0;background:transparent;color:#f2ead9;font:inherit;font-size:12px;text-decoration:underline;cursor:pointer">Clear</button>
+</div>
+</sc-if>
+</div>
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:22px 32px 28px">
+<button onClick="{{ importPhoto }}" aria-label="Import from gallery" style="width:48px;height:48px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#f2ead9;cursor:pointer">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"></path></svg>
+</button>
+<button onClick="{{ shoot }}" aria-label="Take photo" style="width:68px;height:68px;border-radius:50%;border:4px solid rgba(242,234,217,.9);background:{{ camAccent }};cursor:pointer;padding:0"></button>
+<button onClick="{{ startProcessing }}" style="min-width:72px;height:48px;padding:0 16px;border-radius:999px;border:0;background:{{ doneBg }};color:{{ doneFg }};font:inherit;font-size:14px;font-weight:500;cursor:{{ doneCursor }}">{{ doneLabel }}</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isProcessing }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;display:flex;flex-direction:column;padding:24px">
+<sc-if value="{{ procFailed }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px">
+<div class="disp" style="font-size:22px">Could not read this receipt</div>
+<p style="font-size:14px;line-height:1.55;color:var(--text-secondary);margin:0">The image was too dark to find line items.</p>
+<button onClick="{{ goCapture }}" style="min-height:48px;margin-top:8px;border-radius:999px;border:0;background:var(--primary-main);color:var(--primary-contrast);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Retake photo</button>
+<button onClick="{{ enterManually }}" style="min-height:48px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Enter manually</button>
+</div>
+</sc-if>
+<sc-if value="{{ procRunning }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;display:flex;align-items:center;gap:18px;margin-bottom:28px">
+<div style="width:74px;height:100px;flex:none;position:relative;animation:tilt 5s ease-in-out infinite">
+<div style="position:absolute;inset:0;background:#fdfaf2;border:1px solid var(--divider);border-radius:6px 6px 3px 3px;overflow:hidden;box-shadow:0 2px 6px rgba(46,43,37,.18)">
+<div style="padding:8px 7px;font-family:ui-monospace,monospace;font-size:4.6px;line-height:2.1;color:#3a342b">
+<sc-for list="{{ scanLines }}" as="l" hint-placeholder-count="9">
+<div style="opacity:{{ l.o }};animation:reveal .5s ease both;animation-delay:{{ l.delay }}">{{ l.text }}</div>
+</sc-for>
+</div>
+<div style="position:absolute;left:0;right:0;height:22%;background:linear-gradient(rgba(122,138,94,0),rgba(122,138,94,.42));animation:sweep 2.3s linear infinite"></div>
+<div style="position:absolute;left:0;right:0;height:2px;background:{{ camAccent }};box-shadow:0 0 8px rgba(122,138,94,.8);animation:sweep 2.3s linear infinite"></div>
+</div>
+</div>
+<div style="min-width:0">
+<div class="disp" style="font-size:22px">Reading receipt</div>
+<div style="font-size:13px;color:var(--text-secondary);margin-top:4px">On this device</div>
+</div>
+</div>
+<sc-for list="{{ stages }}" as="s" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:14px;min-height:44px">
+<span style="width:18px;height:18px;flex:none;display:grid;place-items:center;color:{{ s.dotFg }}">
+<sc-if value="{{ s.done }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg></sc-if>
+<sc-if value="{{ s.pending }}" hint-placeholder-val="{{ true }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span></sc-if>
+</span>
+<span style="flex:1;font-size:15px;color:{{ s.fg }}">{{ s.label }}</span>
+<sc-if value="{{ s.active }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-secondary);animation:blink 1.4s ease-in-out infinite">working</span></sc-if>
+</div>
+</sc-for>
+<div style="flex:1"></div>
+<button onClick="{{ goHome }}" style="min-height:48px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Do this later</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReceipt }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 {{ receiptPad }}">
+<div style="display:flex;align-items:center;gap:4px;height:56px;padding:0 8px">
+<button onClick="{{ receiptBack }}" aria-label="Back" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-primary);cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+</button>
+<span style="flex:1"></span>
+<sc-if value="{{ viewing }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ startEdit }}" style="min-height:44px;padding:0 12px;border:0;background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;cursor:pointer">Edit</button>
+<button onClick="{{ askDelete }}" aria-label="Delete receipt" style="width:44px;height:44px;margin-right:4px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="color:var(--error-main)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+</button>
+</sc-if>
+<sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ askDelete }}" aria-label="Delete receipt" style="width:44px;height:44px;margin-right:4px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="color:var(--error-main)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+</button>
+</sc-if>
+</div>
+
+<sc-if value="{{ viewing }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 24px">
+<div class="disp" style="font-size:22px">{{ doc.store }}</div>
+<div style="font-size:13px;color:var(--text-secondary);margin-top:4px">{{ doc.meta }}</div>
+<div class="disp" style="font-size:38px;font-variant-numeric:tabular-nums;margin-top:18px">{{ doc.totalStr }}</div>
+<button onClick="{{ startEdit }}" style="margin-top:16px;min-height:32px;padding:5px 14px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--text-secondary);font:inherit;font-size:13px;cursor:pointer" style-hover="background:var(--action-hover)">{{ doc.collName }}</button>
+</div>
+<div style="margin:24px 0 -32px;padding:6px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:400px">
+<div style="display:flex;gap:28px;padding:14px 0;border-bottom:1px solid var(--divider);font-size:13px;font-variant-numeric:tabular-nums;color:var(--text-secondary)">
+<span>{{ doc.taxStr }} tax</span><span>{{ doc.countStr }}</span><span>{{ doc.txn }}</span>
+</div>
+<sc-for list="{{ viewRows }}" as="d" hint-placeholder-count="6">
+<div style="display:flex;align-items:baseline;gap:12px;min-height:56px;padding:15px 0;border-bottom:1px solid var(--divider)">
+<span style="flex:1;min-width:0;font-size:15px">{{ d.name }}</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums">{{ d.lineStr }}</span>
+</div>
+</sc-for>
+<sc-if value="{{ hasPhoto }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ openZoom }}" style="width:100%;min-height:48px;margin-top:20px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">View photo</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 24px 24px">
+<div class="disp" style="font-size:22px">{{ editTitle }}</div>
+</div>
+<div style="padding:24px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:560px">
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ collectionChips }}" as="c" hint-placeholder-count="6">
+<button onClick="{{ c.pick }}" style="min-height:36px;padding:0 12px;border-radius:18px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:inherit;font-size:13px;font-weight:500;cursor:pointer">{{ c.name }}</button>
+</sc-for>
+<button onClick="{{ newCollection }}" aria-label="New collection" style="width:36px;height:36px;display:grid;place-items:center;border-radius:18px;border:1px dashed var(--divider);background:transparent;color:var(--primary-main);cursor:pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+</button>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px;margin-top:24px">
+<label style="font-size:12px;color:var(--text-secondary)">Merchant<input value="{{ doc.store }}" onChange="{{ setStore }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<div style="display:flex;gap:12px">
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Date<input value="{{ doc.date }}" onChange="{{ setDate }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<label style="width:112px;font-size:12px;color:var(--text-secondary)">Total<input value="{{ doc.total }}" onChange="{{ setTotal }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+</div>
+</div>
+
+<sc-if value="{{ mismatch }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:20px;padding:14px 16px;border-radius:16px;background:var(--gh-warn-bg);color:var(--gh-warn-fg);font-size:13.5px;line-height:1.5">{{ mismatchNote }}</div>
+</sc-if>
+
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin:28px 0 0">Line items · {{ itemCount }}</div>
+<sc-for list="{{ editRows }}" as="it" hint-placeholder-count="6">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--divider)">
+<button onClick="{{ it.edit }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:64px;padding:13px 0;border:0;background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.name }}</span>
+<sc-if value="{{ it.flagged }}" hint-placeholder-val="{{ false }}">
+<span style="display:block;font-size:13px;color:{{ warnFg }};margin-top:3px">{{ it.flag }}</span>
+</sc-if>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;flex:none">{{ it.lineStr }}</span>
+</button>
+<button onClick="{{ it.del }}" aria-label="Delete line" style="width:44px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="color:var(--error-main)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+</button>
+</div>
+</sc-for>
+<button onClick="{{ addRow }}" style="width:100%;min-height:48px;margin-top:16px;border:1px solid var(--divider);border-radius:999px;background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer" style-hover="background:var(--action-hover)">Add line item</button>
+<sc-if value="{{ hasPhoto }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ openZoom }}" style="width:100%;min-height:48px;margin-top:12px;border:0;border-radius:999px;background:transparent;color:var(--text-secondary);font:inherit;font-size:14px;cursor:pointer" style-hover="background:var(--action-hover)">Check the photo</button>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReceipts }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="padding:0 24px">
+<div class="disp" style="font-size:22px;height:56px;display:flex;align-items:center">Receipts</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0 16px">
+<button onClick="{{ toggleAttention }}" style="min-height:32px;padding:0 12px;border-radius:16px;border:1px solid {{ attnBd }};background:{{ attnBg }};color:{{ attnFg }};font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">Needs attention · {{ attnCount }}</button>
+<span style="font-size:13px;color:var(--text-secondary);font-variant-numeric:tabular-nums">{{ listSummary }}</span>
+</div>
+</div>
+<div style="margin:0 0 -32px;padding:8px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:520px">
+<sc-for list="{{ list }}" as="r" hint-placeholder-count="7">
+<button onClick="{{ r.open }}" style="display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:15px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+<span style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.store }}</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;flex:none">{{ r.totalStr }}</span>
+</span>
+<span style="display:block;font-size:13px;color:{{ r.subFg }};margin-top:4px">{{ r.sub }}</span>
+</span>
+</button>
+</sc-for>
+<sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:56px 8px;text-align:center">
+<div class="disp" style="font-size:19px;margin-bottom:20px">Nothing needs attention</div>
+<button onClick="{{ toggleAttention }}" style="min-height:44px;padding:0 20px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Show all receipts</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCollection }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="display:flex;align-items:center;gap:4px;height:56px;padding:0 8px">
+<button onClick="{{ collBack }}" aria-label="Back" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-primary);cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+</button>
+</div>
+<div style="padding:0 24px">
+<div class="disp" style="font-size:22px">{{ coll.name }}</div>
+<div class="disp" style="font-size:38px;font-variant-numeric:tabular-nums;margin-top:12px">{{ coll.amount }}</div>
+<div style="font-size:14px;color:var(--text-secondary);margin-top:4px">{{ coll.delta }}</div>
+<div style="display:flex;align-items:flex-end;gap:12px;height:96px;margin-top:24px">
+<sc-for list="{{ coll.bars }}" as="b" hint-placeholder-count="6">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+<div style="width:100%;border-radius:6px 6px 3px 3px;background:{{ b.fill }};height:{{ b.h }}"></div>
+<span style="font-size:12px;color:var(--text-secondary)">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="margin:24px 0 -32px;padding:6px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:400px">
+<div style="display:flex;gap:26px;padding:14px 0;border-bottom:1px solid var(--divider);font-size:13px;font-variant-numeric:tabular-nums;color:var(--text-secondary)">
+<span>{{ coll.count }}</span><span>{{ coll.avg }} avg</span><span>{{ coll.share }} of spend</span>
+</div>
+<sc-for list="{{ coll.receipts }}" as="r" hint-placeholder-count="4">
+<button onClick="{{ r.open }}" style="display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:15px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.store }}</span>
+<span style="display:block;font-size:13px;color:{{ r.subFg }};margin-top:3px">{{ r.sub }}</span>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;flex:none">{{ r.totalStr }}</span>
+</button>
+</sc-for>
+<sc-if value="{{ collEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:52px 8px;text-align:center">
+<div class="disp" style="font-size:19px;margin-bottom:20px">Nothing filed here yet</div>
+<button onClick="{{ goCapture }}" style="min-height:44px;padding:0 20px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Scan a receipt</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isInsights }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="padding:0 24px">
+<div class="disp" style="font-size:22px;height:56px;display:flex;align-items:center">Insights</div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin-top:8px">Every collection, July</div>
+<div class="disp" style="font-size:38px;font-variant-numeric:tabular-nums;margin-top:8px">{{ monthTotal }}</div>
+<div style="font-size:14px;color:var(--text-secondary);margin-top:4px">{{ monthDelta }}</div>
+<div style="display:flex;align-items:flex-end;gap:12px;height:96px;margin-top:24px">
+<sc-for list="{{ bars }}" as="b" hint-placeholder-count="6">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+<div style="width:100%;border-radius:6px 6px 3px 3px;background:{{ b.fill }};height:{{ b.h }}"></div>
+<span style="font-size:12px;color:var(--text-secondary)">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="margin:24px 0 -32px;padding:20px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:480px">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary)">Moving most</div>
+<sc-for list="{{ movers }}" as="c" hint-placeholder-count="4">
+<button onClick="{{ c.open }}" style="display:flex;align-items:baseline;gap:12px;width:100%;min-height:56px;padding:15px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">{{ c.name }}</span>
+<span style="font-variant-numeric:tabular-nums">{{ c.amount }} <span style="font-size:13px;color:{{ c.deltaFg }};margin-left:6px">{{ c.delta }}</span></span>
+</button>
+</sc-for>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin-top:32px">What you buy again</div>
+<sc-for list="{{ items }}" as="f" hint-placeholder-count="5">
+<button onClick="{{ f.open }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:15px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px">{{ f.name }}</span>
+<span style="display:block;font-size:13px;color:var(--text-secondary);margin-top:3px">{{ f.rhythm }}</span>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums">{{ f.price }}</span>
+<span style="font-size:13px;font-variant-numeric:tabular-nums;color:{{ f.deltaFg }};flex:none;width:52px;text-align:right">{{ f.delta }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isItem }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="display:flex;align-items:center;gap:4px;height:56px;padding:0 8px">
+<button onClick="{{ goInsights }}" aria-label="Back" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-primary);cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+</button>
+</div>
+<div style="padding:0 24px">
+<div class="disp" style="font-size:22px">{{ item.name }}</div>
+<div style="display:flex;align-items:baseline;gap:10px;margin-top:12px">
+<span class="disp" style="font-size:38px;font-variant-numeric:tabular-nums">{{ item.price }}</span>
+<span style="font-size:14px;font-variant-numeric:tabular-nums;color:{{ item.deltaFg }}">{{ item.delta }}</span>
+</div>
+<div style="font-size:14px;color:var(--text-secondary);margin-top:4px">{{ item.unit }}</div>
+<sc-if value="{{ item.hasChart }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:flex-end;gap:8px;height:100px;margin-top:24px">
+<sc-for list="{{ item.bars }}" as="b" hint-placeholder-count="8">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+<span style="font-size:9.5px;color:var(--text-secondary);font-variant-numeric:tabular-nums">{{ b.value }}</span>
+<div style="width:100%;border-radius:5px 5px 2px 2px;background:{{ b.fill }};height:{{ b.h }}"></div>
+<span style="font-size:10px;color:var(--text-secondary)">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<div style="margin:24px 0 -32px;padding:6px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:420px">
+<div style="display:flex;gap:26px;padding:14px 0;border-bottom:1px solid var(--divider);font-size:13px;font-variant-numeric:tabular-nums;color:var(--text-secondary)">
+<span>{{ item.rhythm }}</span><span>{{ item.count }}</span><span>{{ item.spent }} total</span>
+</div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin-top:24px">Where you buy it</div>
+<sc-for list="{{ item.stores }}" as="m" hint-placeholder-count="3">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:52px;padding:14px 0;border-bottom:1px solid var(--divider);font-size:15px">
+<span style="flex:1;min-width:0">{{ m.name }}</span>
+<span style="font-variant-numeric:tabular-nums;color:{{ m.fg }}">{{ m.price }} <span style="font-size:13px;color:var(--text-secondary);margin-left:6px">{{ m.times }}</span></span>
+</div>
+</sc-for>
+<div style="display:flex;align-items:flex-start;gap:14px;margin-top:20px;padding:16px;border-radius:20px;background:var(--action-selected)">
+<div style="flex:1;min-width:0">
+<div style="font-size:15px;line-height:1.4">{{ item.valueHeadline }}</div>
+<div style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:4px">{{ item.valueNote }}</div>
+</div>
+<sc-if value="{{ item.showSaving }}" hint-placeholder-val="{{ true }}">
+<span class="disp" style="font-size:17px;font-variant-numeric:tabular-nums;color:{{ goodFg }};flex:none;white-space:nowrap">{{ item.saves }}</span>
+</sc-if>
+</div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin-top:24px">Last bought</div>
+<sc-for list="{{ item.history }}" as="h" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:14px 0;border-bottom:1px solid var(--divider)">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px">{{ h.date }}</span>
+<span style="display:block;font-size:13px;color:var(--text-secondary);margin-top:2px">{{ h.store }}</span>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums">{{ h.price }}</span>
+</div>
+</sc-for>
+<button onClick="{{ item.addToList }}" style="width:100%;min-height:48px;margin-top:24px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Add to list</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLists }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="padding:0 24px">
+<div class="disp" style="font-size:22px;height:56px;display:flex;align-items:center">List</div>
+<div style="display:flex;gap:8px;padding:4px 0 20px">
+<input placeholder="Add an item" value="{{ newItem }}" onChange="{{ setNewItem }}" onKeyDown="{{ onNewItemKey }}" style="flex:1;min-height:48px;padding:0 14px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px">
+<button onClick="{{ addShopping }}" aria-label="Add item" style="width:48px;height:48px;flex:none;display:grid;place-items:center;border-radius:999px;border:0;background:var(--primary-main);color:var(--primary-contrast);cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+</button>
+</div>
+</div>
+<div style="margin:0 0 -32px;padding:12px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:500px">
+<sc-for list="{{ toBuy }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--divider)">
+<button onClick="{{ s.toggle }}" style="flex:1;display:flex;align-items:center;gap:16px;min-height:60px;padding:10px 0;border:0;background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="width:20px;height:20px;flex:none;border-radius:7px;border:2px solid var(--text-secondary)"></span>
+<span style="flex:1;min-width:0;font-size:16px">{{ s.name }}</span>
+</button>
+<button onClick="{{ s.del }}" aria-label="Remove item" style="width:44px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="color:var(--error-main)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+</button>
+</div>
+</sc-for>
+<sc-if value="{{ hasDone }}" hint-placeholder-val="{{ true }}">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin-top:28px">Picked up · {{ doneCount }}</div>
+<sc-for list="{{ done }}" as="s" hint-placeholder-count="2">
+<button onClick="{{ s.toggle }}" style="display:flex;align-items:center;gap:16px;width:100%;min-height:56px;padding:12px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-secondary);font:inherit;text-align:left;cursor:pointer">
+<span style="width:20px;height:20px;flex:none;border-radius:7px;background:var(--primary-main);color:var(--primary-contrast);display:grid;place-items:center">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>
+</span>
+<span style="flex:1;font-size:16px;text-decoration:line-through">{{ s.name }}</span>
+</button>
+</sc-for>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAccount }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="padding:0 24px">
+<div class="disp" style="font-size:22px;height:56px;display:flex;align-items:center">Account</div>
+</div>
+<div style="margin:8px 0 -32px;padding:8px 24px 32px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);border-radius:28px 28px 0 0;min-height:520px">
+<sc-for list="{{ settings }}" as="s" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:14px 0;border-bottom:1px solid var(--divider)">
+<span style="font-size:15px">{{ s.label }}</span>
+<span style="font-size:14px;color:var(--text-secondary);flex:none">{{ s.value }}</span>
+</div>
+</sc-for>
+<button onClick="{{ toggleOffline }}" style="min-height:44px;margin-top:24px;padding:0 20px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">{{ offlineLabel }}</button>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;bottom:0;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);padding:16px 24px 24px">
+<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;color:{{ diffFg }}"><span>{{ diffLabel }}</span><span>{{ diffValue }}</span></div>
+<button onClick="{{ saveReceipt }}" style="width:100%;min-height:48px;margin-top:14px;border-radius:999px;border:1px solid {{ saveBd }};background:{{ saveBg }};color:{{ saveFg }};font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">{{ saveLabel }}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;height:68px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);display:flex;align-items:center">
+<button onClick="{{ navHome.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navHome.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+<span style="font-size:11px;font-weight:500">Home</span>
+</button>
+<button onClick="{{ navReceipts.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navReceipts.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 3.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5zM19 19.09H5V4.91h14v14.18zM6 15h12v2H6zm0-4h12v2H6zm0-4h12v2H6z"></path></svg>
+<span style="font-size:11px;font-weight:500">Receipts</span>
+</button>
+<div style="flex:1;display:flex;justify-content:center">
+<button onClick="{{ goCapture }}" aria-label="Scan a receipt" style="width:56px;height:56px;display:grid;place-items:center;margin-top:-20px;border-radius:50%;border:0;background:var(--primary-main);color:var(--primary-contrast);cursor:pointer;box-shadow:0 3px 5px rgba(0,0,0,.2),0 6px 10px rgba(0,0,0,.14)">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9zm3 15a5 5 0 110-10 5 5 0 010 10zm0-2a3 3 0 100-6 3 3 0 000 6z"></path></svg>
+</button>
+</div>
+<button onClick="{{ navInsights.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navInsights.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"></path></svg>
+<span style="font-size:11px;font-weight:500">Insights</span>
+</button>
+<button onClick="{{ navLists.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navLists.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h2v2H3V5zm0 6h2v2H3v-2zm0 6h2v2H3v-2zM7 5h14v2H7V5zm0 6h14v2H7v-2zm0 6h14v2H7v-2z"></path></svg>
+<span style="font-size:11px;font-weight:500">List</span>
+</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end">
+<div class="s" style="width:100%;background:var(--background-paper-elevation-1);border-radius:26px 26px 0 0;padding:24px;max-height:88%;overflow:auto">
+<div class="disp" style="font-size:20px;margin-bottom:20px">Line item</div>
+<sc-if value="{{ sheetFlagged }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:13.5px;line-height:1.5;background:var(--gh-warn-bg);color:var(--gh-warn-fg);border-radius:16px;padding:12px 14px;margin-bottom:20px">{{ sheetNote }}</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:16px">
+<label style="font-size:12px;color:var(--text-secondary)">Description<input value="{{ sheetName }}" onChange="{{ setSheetName }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<div style="display:flex;gap:12px">
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Quantity<input value="{{ sheetQty }}" onChange="{{ setSheetQty }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Line total<input value="{{ sheetLine }}" onChange="{{ setSheetLine }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+</div>
+</div>
+<div style="display:flex;gap:12px;margin-top:24px">
+<button onClick="{{ deleteFromSheet }}" style="min-height:48px;padding:0 20px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--error-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Delete</button>
+<button onClick="{{ closeSheet }}" style="flex:1;min-height:48px;border-radius:999px;border:0;background:var(--primary-main);color:var(--primary-contrast);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Done</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end">
+<div style="width:100%;background:var(--background-paper-elevation-1);border-radius:26px 26px 0 0;padding:24px">
+<div class="disp" style="font-size:20px;margin-bottom:20px">New collection</div>
+<label style="font-size:12px;color:var(--text-secondary)">Name<input placeholder="Travel" value="{{ newCollName }}" onChange="{{ setNewCollName }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:14px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<div style="display:flex;gap:12px;margin-top:24px">
+<button onClick="{{ closeNew }}" style="min-height:48px;padding:0 20px;border-radius:999px;border:0;background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Cancel</button>
+<button onClick="{{ createCollection }}" style="flex:1;min-height:48px;border-radius:999px;border:0;background:var(--primary-main);color:var(--primary-contrast);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Create</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ zoom }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#221d16;display:flex;flex-direction:column">
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 8px;color:#f2ead9">
+<button onClick="{{ closeZoom }}" aria-label="Close" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+<span style="font-size:13px;color:rgba(242,234,217,.7)">{{ doc.file }}</span><span style="width:44px"></span>
+</div>
+<div class="s" style="flex:1;overflow:auto;display:grid;place-items:center;padding:16px">
+<div style="width:300px;background:#fff;padding:24px 20px;font-family:ui-monospace,monospace;font-size:12px;line-height:2;color:#191c20">
+<sc-for list="{{ photoLines }}" as="l" hint-placeholder-count="13"><div>{{ l }}</div></sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ dupOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:24px">
+<div style="width:100%;background:var(--background-paper-elevation-1);border-radius:22px;padding:24px">
+<div class="disp" style="font-size:20px;margin-bottom:10px">Possible duplicate</div>
+<p style="font-size:14px;line-height:1.55;color:var(--text-secondary);margin:0 0 24px">Fernway Grocer, $86.40 — already recorded two minutes earlier.</p>
+<div style="display:flex;flex-direction:column;gap:12px">
+<button onClick="{{ discardDup }}" style="min-height:48px;border-radius:999px;border:0;background:var(--primary-main);color:var(--primary-contrast);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Discard the new one</button>
+<button onClick="{{ keepDup }}" style="min-height:48px;border-radius:999px;border:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Keep both</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ confirmDelete }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:24px">
+<div style="width:100%;background:var(--background-paper-elevation-1);border-radius:22px;padding:24px">
+<div class="disp" style="font-size:20px;margin-bottom:10px">Delete this receipt?</div>
+<p style="font-size:14px;line-height:1.55;color:var(--text-secondary);margin:0 0 24px">It leaves {{ doc.collName }} and all insights.</p>
+<div style="display:flex;gap:8px;justify-content:flex-end">
+<button onClick="{{ cancelDelete }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:0;background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Cancel</button>
+<button onClick="{{ doDelete }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:0;background:var(--error-main);color:#fff;font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Delete</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:24px;right:24px;bottom:{{ toastBottom }};background:#3b332a;color:#f6efe2;border-radius:16px;padding:14px 16px;font-size:14px">{{ toast }}</div>
+</sc-if>
+
+</div>
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;colorway&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sage&quot;,&quot;clay&quot;,&quot;olive&quot;],&quot;default&quot;:&quot;sage&quot;,&quot;tsType&quot;:&quot;'sage' | 'clay' | 'olive'&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;},&quot;showConfidence&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const MONTHS = ['Feb','Mar','Apr','May','Jun','Jul'];
+const money = n => '$' + (Math.round(n * 100) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
+const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+
+const VIEWFINDER = ['HALTON FRESH MARKET','62 CARLYLE ST','------------------','MILK 2L 3.60','BANANAS 4.84','SOURDOUGH 6.50','EGGS 12PK 8.20','TOMATOES 3.54','DISHWASH 4.06','------------------','TOTAL 31.73'];
+
+const ITEMS = [
+  { name: 'Milk full cream 2L', coll: 'Groceries', rhythm: 'Every 5 days', count: 9, perYear: 73, per: 1, unit: '$1.80 per litre',
+    labels: ['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'], series: [3.20,3.20,3.30,3.40,3.40,3.50,3.50,3.60],
+    stores: [['Halton Fresh Market','$3.60','6 times'],['Fernway Grocer','$3.45','3 times']],
+    history: [['26 Jul','Halton Fresh Market','$3.60'],['21 Jul','Halton Fresh Market','$3.60'],['16 Jul','Fernway Grocer','$3.45']] },
+  { name: 'Unleaded 91', coll: 'Fuel', rhythm: 'Every 9 days', count: 8, perYear: 40, per: 47, unit: 'per litre · 47 L average fill',
+    labels: ['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'], series: [1.84,1.79,1.88,1.95,1.91,1.98,1.96,2.02],
+    stores: [['Shell Coles Express','$2.02','5 fills'],['BP Brunswick','$1.94','3 fills']],
+    history: [['21 Jul','Shell Coles Express','$2.02'],['12 Jul','BP Brunswick','$1.96'],['3 Jul','Shell Coles Express','$1.99']] },
+  { name: 'Flat white', coll: 'Dining', rhythm: 'Twice a week', count: 6, perYear: 104, per: 1, unit: 'regular size',
+    labels: ['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'], series: [4.50,4.50,4.80,4.80,5.00,5.00,5.20,5.20],
+    stores: [['Ambrose Coffee','$5.20','5 times'],['Corner Providore','$5.00','1 time']],
+    history: [['25 Jul','Ambrose Coffee','$5.20'],['23 Jul','Ambrose Coffee','$5.20'],['18 Jul','Corner Providore','$5.00']] },
+  { name: 'Bananas Cavendish', coll: 'Groceries', rhythm: 'Every 6 days', count: 7, perYear: 61, per: 1.2, unit: 'per kg · 1.2 kg average',
+    labels: ['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'], series: [4.40,4.60,4.40,4.20,4.10,3.90,4.00,3.90],
+    stores: [['Halton Fresh Market','$3.90','5 times'],['Fernway Grocer','$4.20','2 times']],
+    history: [['26 Jul','Halton Fresh Market','$3.90'],['19 Jul','Halton Fresh Market','$3.90'],['12 Jul','Fernway Grocer','$4.20']] },
+  { name: 'Sourdough loaf', coll: 'Groceries', rhythm: 'Weekly', count: 6, perYear: 52, per: 1, unit: '750 g loaf',
+    labels: ['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'], series: [6.50,6.50,6.50,6.50,6.50,6.50,6.50,6.50],
+    stores: [['Halton Fresh Market','$6.50','4 times'],['Fernway Grocer','$6.50','2 times']],
+    history: [['26 Jul','Halton Fresh Market','$6.50'],['19 Jul','Fernway Grocer','$6.50'],['12 Jul','Halton Fresh Market','$6.50']] }
+];
+
+const DOCS = {
+  r1: { store: 'Halton Fresh Market', date: '26 Jul 2026', time: '4:08 pm', txn: '0192-4471', coll: 'groceries', status: 'review',
+    total: '31.73', tax: '2.88', file: 'IMG_4821.HEIC',
+    photo: ['HALTON FRESH MARKET','62 CARLYLE ST, BRUNSWICK','------------------------------','26/07/26 16:08 TXN 0192-4471','MILK FULL CREAM 2L 3.60','BANANAS 1.24kg 4.84','SOURDOUGH LOAF 6.50','EGGS FREE RANGE 8.20','TOMATOES ROMA 3.54','D1SHWASH L1QU1D 4.06','CHILLI LOOSE 0.99','------------------------------','TOTAL 31.73'],
+    items: [
+      { id: 1, name: 'Milk full cream 2L', qty: '1', line: '3.60' },
+      { id: 2, name: 'Bananas Cavendish', qty: '1.24 kg', line: '4.84' },
+      { id: 3, name: 'Sourdough loaf', qty: '1', line: '6.50' },
+      { id: 4, name: 'Eggs free range 12pk', qty: '1', line: '8.20', flag: 'The price was smudged — we read $8.20.' },
+      { id: 5, name: 'Tomatoes Roma', qty: '0.60 kg', line: '3.54' },
+      { id: 6, name: 'D1shwash l1qu1d', qty: '1', line: '4.06', flag: 'Two characters were unclear.' }
+    ] },
+  r2: { store: 'AGL Energy', date: '25 Jul 2026', time: '', txn: 'INV-77401', coll: 'bills', status: 'confirmed',
+    total: '184.20', tax: '16.75', file: '',
+    items: [
+      { id: 1, name: 'Electricity usage 412 kWh', qty: '412 kWh', line: '140.08' },
+      { id: 2, name: 'Daily supply charge', qty: '31 days', line: '38.44' },
+      { id: 3, name: 'Concession', qty: '1', line: '-11.07' },
+      { id: 4, name: 'GST', qty: '1', line: '16.75' }
+    ] },
+  r3: { store: 'Fernway Grocer', date: '24 Jul 2026', time: '5:41 pm', txn: '0188-2210', coll: 'groceries', status: 'confirmed',
+    total: '86.40', tax: '7.85', file: 'IMG_4770.HEIC',
+    photo: ['FERNWAY GROCER','112 ALBANY RD, COBURG','------------------------------','24/07/26 17:41 TXN 0188-2210','OAT MILK 1L 2 @ 4.20 8.40','CHICKEN THIGH 1.02kg 13.26','BROCCOLI 0.48kg 3.31','PENNE 500G 3 @ 2.40 7.20','GREEK YOGHURT 1KG 7.50','LAUNDRY POWDER 2KG 14.90','COFFEE BEANS 250G 18.90','OLIVE OIL 500ML 12.93','------------------------------','TOTAL 86.40'],
+    items: [
+      { id: 1, name: 'Oat milk 1L', qty: '2', line: '8.40' },
+      { id: 2, name: 'Chicken thigh fillet', qty: '1.02 kg', line: '13.26' },
+      { id: 3, name: 'Broccoli', qty: '0.48 kg', line: '3.31' },
+      { id: 4, name: 'Penne 500g', qty: '3', line: '7.20' },
+      { id: 5, name: 'Greek yoghurt 1kg', qty: '1', line: '7.50' },
+      { id: 6, name: 'Laundry powder 2kg', qty: '1', line: '14.90' },
+      { id: 7, name: 'Coffee beans 250g', qty: '1', line: '18.90' },
+      { id: 8, name: 'Olive oil 500ml', qty: '1', line: '12.93' }
+    ] },
+  r4: { store: 'Corner Providore', date: '23 Jul 2026', time: '8:12 am', txn: '4471', coll: 'dining', status: 'confirmed',
+    total: '12.85', tax: '1.17', file: '',
+    items: [{ id: 1, name: 'Flat white', qty: '2', line: '10.20' }, { id: 2, name: 'Almond croissant', qty: '1', line: '2.65' }] },
+  r5: { store: 'Shell Coles Express', date: '21 Jul 2026', time: '6:30 pm', txn: '9920-1', coll: 'fuel', status: 'confirmed',
+    total: '92.10', tax: '8.37', file: '',
+    items: [{ id: 1, name: 'Unleaded 91', qty: '45.6 L', line: '92.10' }] },
+  r6: { store: 'Fernway Grocer', date: '22 Jul 2026', time: '5:39 pm', txn: '0188-2210', coll: 'groceries', status: 'duplicate',
+    total: '86.40', tax: '7.85', file: 'Gallery import',
+    items: [{ id: 1, name: 'Oat milk 1L', qty: '2', line: '8.40' }, { id: 2, name: 'Chicken thigh fillet', qty: '1.02 kg', line: '13.26' }] },
+  r7: { store: 'Halton Fresh Market', date: '19 Jul 2026', time: '', txn: '', coll: 'groceries', status: 'failed',
+    total: '', tax: '', file: 'scan_0192.pdf', items: [] },
+  r8: { store: 'Bayside Pharmacy', date: '17 Jul 2026', time: '11:04 am', txn: '3310', coll: 'health', status: 'confirmed',
+    total: '38.50', tax: '0.00', file: '',
+    items: [{ id: 1, name: 'Prescription', qty: '1', line: '18.50' }, { id: 2, name: 'Vitamin D 90pk', qty: '1', line: '20.00' }] },
+  r9: { store: 'Halston Hardware', date: '20 Jul 2026', time: '3:22 pm', txn: '7781', coll: 'household', status: 'confirmed',
+    total: '61.20', tax: '5.56', file: '',
+    items: [
+      { id: 1, name: 'Dish sponges 4pk', qty: '1', line: '6.20' },
+      { id: 2, name: 'Storage tub 45L', qty: '1', line: '24.00' },
+      { id: 3, name: 'LED bulb E27 warm 2pk', qty: '1', line: '18.00' },
+      { id: 4, name: 'Tap washer set', qty: '1', line: '13.00' }
+    ] }
+};
+const ORDER = ['r1','r2','r3','r4','r5','r6','r9','r7','r8'];
+
+const CW = {
+  sage: { label: 'Sage', ground: '#f5ead8', accent: '#7a8a5e', accent2: '#c67139',
+    light: { ink: '#201e1d', dim: '#6f6455', key: '#5f6f47', onKey: '#fdf8ee', good: '#4c5a38', warn: '#a1571d', div: 'rgba(32,30,29,.14)' },
+    dark: { ink: '#f1e8d8', dim: 'rgba(241,232,216,.68)', key: '#a2b47f', onKey: '#1c1813', good: '#b9c99a', warn: '#e0a464', div: 'rgba(241,232,216,.16)' } },
+  clay: { label: 'Clay', ground: '#f7ecdc', accent: '#b4602c', accent2: '#7a8a5e',
+    light: { ink: '#2b1f16', dim: '#7d6552', key: '#b4602c', onKey: '#fffaf3', good: '#5c6b41', warn: '#9d3423', div: 'rgba(58,38,24,.14)' },
+    dark: { ink: '#f4e7d8', dim: 'rgba(244,231,216,.66)', key: '#e09257', onKey: '#1e1712', good: '#b3c78d', warn: '#e08d78', div: 'rgba(244,231,216,.16)' } },
+  olive: { label: 'Olive ink', ground: '#f4f1e6', accent: '#3d4a2f', accent2: '#8e3a2a',
+    light: { ink: '#1e221a', dim: '#6b7062', key: '#3d4a2f', onKey: '#fdfcf7', good: '#3d4a2f', warn: '#8e3a2a', div: 'rgba(30,34,26,.13)' },
+    dark: { ink: '#eceadb', dim: 'rgba(236,234,219,.66)', key: '#b6c78e', onKey: '#16180f', good: '#b6c78e', warn: '#dc8f7a', div: 'rgba(236,234,219,.15)' } }
+};
+
+class Component extends DCLogic {
+  state = {
+    screen: 'home', themeOverride: null, colorway: null,
+    docs: JSON.parse(JSON.stringify(DOCS)), order: ORDER.slice(),
+    openId: 'r1', editing: false, from: 'home',
+    attnOnly: false, collKey: 'groceries', collFrom: 'home', itemIndex: 0,
+    procStage: 0, procRunning: true, procFailed: false,
+    pages: 0, camDenied: false, offline: false,
+    sheetId: null, zoom: false, dupOpen: false, confirmDelete: false,
+    newOpen: false, newCollName: '', newItem: '', toast: null,
+    colls: [
+      { key: 'groceries', name: 'Groceries', month: 486.20, receipts: 11, delta: '+8%' },
+      { key: 'bills', name: 'Bills & utilities', month: 312.40, receipts: 4, delta: '+2%' },
+      { key: 'fuel', name: 'Fuel', month: 168.90, receipts: 3, delta: '−4%' },
+      { key: 'dining', name: 'Dining', month: 94.60, receipts: 6, delta: '+19%' },
+      { key: 'household', name: 'Household', month: 61.20, receipts: 1, delta: '−7%' },
+      { key: 'health', name: 'Health', month: 38.50, receipts: 1, delta: '+1%' }
+    ],
+    shopping: [
+      { id: 1, name: 'Coffee beans 250g', done: false },
+      { id: 2, name: 'Dish sponges', done: false },
+      { id: 3, name: 'Printer paper A4', done: false },
+      { id: 4, name: 'Bananas', done: true }
+    ]
+  };
+
+  componentWillUnmount() { clearInterval(this._t); clearTimeout(this._toast); }
+
+  go(screen) { clearInterval(this._t); this.setState({ screen, editing: false, sheetId: null, zoom: false, dupOpen: false, confirmDelete: false, newOpen: false }); }
+  flash(msg) { clearTimeout(this._toast); this.setState({ toast: msg }); this._toast = setTimeout(() => this.setState({ toast: null }), 2600); }
+
+  openDoc(id, from) {
+    clearInterval(this._t);
+    const d = this.state.docs[id];
+    if (d && d.status === 'duplicate') { this.setState({ openId: id, from: from, dupOpen: true, screen: from }); return; }
+    if (d && d.status === 'failed') { this.setState({ screen: 'processing', procRunning: false, procFailed: true, openId: id, from: from }); return; }
+    this.setState({ screen: 'receipt', openId: id, from: from, editing: !!d && d.status === 'review', sheetId: null, zoom: false, confirmDelete: false });
+  }
+
+  patchDoc(key, value) {
+    this.setState(s => ({ docs: Object.assign({}, s.docs, { [s.openId]: Object.assign({}, s.docs[s.openId], { [key]: value }) }) }));
+  }
+
+  patchLine(id, key, value) {
+    this.setState(s => {
+      const d = s.docs[s.openId];
+      const items = d.items.map(i => i.id === id ? Object.assign({}, i, { [key]: value }) : i);
+      return { docs: Object.assign({}, s.docs, { [s.openId]: Object.assign({}, d, { items: items }) }) };
+    });
+  }
+
+  removeLine(id) {
+    this.setState(s => {
+      const d = s.docs[s.openId];
+      return { docs: Object.assign({}, s.docs, { [s.openId]: Object.assign({}, d, { items: d.items.filter(i => i.id !== id) }) }), sheetId: null };
+    });
+  }
+
+  runProcessing() {
+    clearInterval(this._t);
+    this.setState({ screen: 'processing', procStage: 0, procRunning: true, procFailed: false, openId: 'r1', from: 'home', zoom: false, dupOpen: false, newOpen: false });
+    this._t = setInterval(() => {
+      this.setState(s => {
+        if (s.screen !== 'processing') { clearInterval(this._t); return null; }
+        if (s.procStage >= 4) { clearInterval(this._t); return { screen: 'receipt', editing: true, pages: 0 }; }
+        return { procStage: s.procStage + 1 };
+      });
+    }, 1100);
+  }
+
+  newDoc() {
+    const id = 'n' + Date.now();
+    this.setState(s => ({
+      docs: Object.assign({}, s.docs, { [id]: { store: '', date: '30 Jul 2026', time: '', txn: '', coll: 'groceries', status: 'review', total: '', tax: '', file: '', items: [] } }),
+      order: [id].concat(s.order), openId: id, screen: 'receipt', editing: true, from: 'receipts', procFailed: false
+    }));
+  }
+
+  enterByHand() {
+    const s = this.state, id = s.openId, d = s.docs[id];
+    if (!d || d.status !== 'failed') { this.newDoc(); return; }
+    this.setState(st => ({
+      docs: Object.assign({}, st.docs, { [id]: Object.assign({}, st.docs[id], { status: 'review' }) }),
+      screen: 'receipt', editing: true, procFailed: false, from: 'receipts'
+    }));
+  }
+
+  leaveReceipt() {
+    const s = this.state, d = s.docs[s.openId] || {};
+    const blank = s.editing && !String(d.store || '').trim() && !String(d.total || '').trim() && (d.items || []).length === 0;
+    if (blank) this.setState(st => ({ order: st.order.filter(x => x !== st.openId) }));
+    this.go(s.from);
+  }
+
+  renderVals() {
+    const s = this.state, P = this.props;
+    const dark = (s.themeOverride || P.theme || 'light') === 'dark';
+    const cwKey = s.colorway || P.colorway || 'sage';
+    const c = (CW[cwKey] || CW.sage)[dark ? 'dark' : 'light'];
+    const ink = c.ink, dim = c.dim, key = c.key, onKey = c.onKey, good = c.good, warn = c.warn, divider = c.div;
+    const camAccent = (CW[cwKey] || CW.sage).dark.key;
+    const camAccentFg = (CW[cwKey] || CW.sage).dark.onKey;
+    const chip = on => ({ bg: on ? key : 'transparent', fg: on ? onKey : ink, bd: on ? key : divider });
+    const barFill = last => last ? key : (dark ? 'rgba(241,232,216,.18)' : 'rgba(32,30,29,.14)');
+    const collName = k => { const f = s.colls.find(x => x.key === k); return f ? f.name : 'Unfiled'; };
+
+    const doc = s.docs[s.openId] || DOCS.r1;
+    const lineSum = doc.items.reduce((a, i) => a + num(i.line), 0);
+    const docTotal = num(doc.total);
+    const diff = Math.round((docTotal - lineSum) * 100) / 100;
+    const balanced = Math.abs(diff) < 0.005;
+    const hasStore = !!String(doc.store).trim(), hasTotal = docTotal > 0;
+    const fileable = hasStore && hasTotal;
+    const missing = hasStore ? 'a total' : (hasTotal ? 'a merchant' : 'a merchant and total');
+    const flagged = doc.items.filter(i => i.flag).length > 0;
+
+    /* ---- lists ---- */
+    const attnKinds = ['review','duplicate','failed'];
+    const subOf = d => {
+      if (d.status === 'review') return d.date.replace(' 2026', '') + ' · Needs review';
+      if (d.status === 'duplicate') return d.date.replace(' 2026', '') + ' · Possible duplicate';
+      if (d.status === 'failed') return d.date.replace(' 2026', '') + ' · Could not be read';
+      return d.date.replace(' 2026', '') + ' · ' + collName(d.coll);
+    };
+    const rowFor = (id, from) => {
+      const d = s.docs[id];
+      return { store: d.store || 'Untitled receipt', totalStr: d.total ? money(num(d.total)) : '—',
+        sub: subOf(d), subFg: attnKinds.indexOf(d.status) >= 0 ? warn : dim,
+        open: () => this.openDoc(id, from) };
+    };
+    const attnCount = s.order.filter(id => attnKinds.indexOf(s.docs[id].status) >= 0).length;
+    const listIds = s.order.filter(id => !s.attnOnly || attnKinds.indexOf(s.docs[id].status) >= 0);
+
+    /* ---- collection ---- */
+    const cRec = s.colls.find(x => x.key === s.collKey) || s.colls[0];
+    const monthSum = s.colls.reduce((a, x) => a + x.month, 0);
+    const deltaPct = (parseFloat(String(cRec.delta).replace('−', '-').replace(/[^0-9.\-]/g, '')) || 0) / 100;
+    const jun = cRec.month / (1 + (deltaPct || 0.001));
+    const seed = cRec.key.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0);
+    const wob = i => 1 + (((seed * (i + 3) * 37) % 21) - 10) / 100;
+    const cSeries = [jun * 0.88 * wob(0), jun * 0.97 * wob(1), jun * 0.91 * wob(2), jun * 1.03 * wob(3), jun, cRec.month];
+    const cPeak = Math.max.apply(null, cSeries) || 1;
+    const collReceipts = s.order.filter(id => s.docs[id].coll === cRec.key);
+
+    /* ---- item ---- */
+    const it = ITEMS[s.itemIndex] || ITEMS[0];
+    const iSeries = it.series;
+    const iPeak = Math.max.apply(null, iSeries), iLow = Math.min.apply(null, iSeries);
+    const iFlat = iPeak - iLow < 0.005;
+    const iFloor = iLow - (iPeak - iLow) * 0.35;
+    const iSpan = iPeak - iFloor || 1;
+    const iPct = ((iSeries[iSeries.length - 1] - iSeries[0]) / iSeries[0]) * 100;
+    const prices = it.stores.map(x => parseFloat(x[1].slice(1)));
+    const gap = (Math.max.apply(null, prices) - Math.min.apply(null, prices)) * it.per;
+    const cheapest = it.stores.reduce((a, b) => parseFloat(b[1].slice(1)) < parseFloat(a[1].slice(1)) ? b : a);
+    const dearest = it.stores.reduce((a, b) => parseFloat(b[1].slice(1)) > parseFloat(a[1].slice(1)) ? b : a);
+    const usual = it.stores.reduce((a, x) => parseInt(x[2], 10) > parseInt(a[2], 10) ? x : a);
+    const sameEverywhere = it.stores.length < 2 || gap < 0.005;
+    const alreadyBest = usual[0] === cheapest[0];
+
+    const addNamed = name => {
+      const dupe = s.shopping.some(x => x.name === name);
+      if (!dupe) this.setState(st => ({ shopping: st.shopping.concat([{ id: Date.now(), name: name, done: false }]) }));
+      this.flash(dupe ? name + ' is already on the list' : name + ' added');
+    };
+
+    const screens = [['home','Home'],['capture','Capture'],['processing','Processing'],['receipt','Receipt'],['receipts','Receipts'],['collection','Collection'],['insights','Insights'],['item','Item'],['lists','List'],['account','Account']];
+    const navItem = k => ({ fg: s.screen === k || (k === 'insights' && s.screen === 'item') || (k === 'home' && s.screen === 'collection') ? key : dim, go: () => this.go(k) });
+    const stageDefs = ['Preparing image','Finding receipt sections','Reading merchant and totals','Checking the numbers','Preparing review'];
+
+    return {
+      cwClass: 'cw-' + cwKey, themeClass: dark ? 'dark' : '',
+      themeLabel: dark ? 'Light theme' : 'Dark theme',
+      toggleTheme: () => this.setState({ themeOverride: dark ? 'light' : 'dark' }),
+      cwOptions: Object.keys(CW).map(k => ({
+        label: CW[k].label, ground: CW[k].ground, accent: CW[k].accent, accent2: CW[k].accent2,
+        bg: k === cwKey ? 'rgba(32,30,29,.08)' : 'transparent', weight: k === cwKey ? '500' : '400',
+        pick: () => this.setState({ colorway: k })
+      })),
+      warnFg: warn, goodFg: good,
+      networkLabel: s.offline ? 'Offline · queued' : '',
+
+      rail: screens.map(([k, label]) => ({
+        label: label,
+        bg: s.screen === k ? 'rgba(95,111,71,.12)' : 'transparent',
+        fg: s.screen === k ? '#4c5a38' : '#302b23',
+        weight: s.screen === k ? '500' : '400',
+        go: () => k === 'processing' ? this.runProcessing() : (k === 'receipt' ? this.openDoc('r3', 'receipts') : this.go(k))
+      })),
+      stateRail: [
+        { label: 'Needs review', go: () => this.openDoc('r1', 'receipts') },
+        { label: 'Duplicate', go: () => this.openDoc('r6', 'receipts') },
+        { label: 'Read failed', go: () => this.openDoc('r7', 'receipts') },
+        { label: 'New by hand', go: () => this.newDoc() },
+        { label: 'Camera denied', go: () => { this.go('capture'); this.setState({ camDenied: true }); } },
+        { label: s.offline ? 'Go online' : 'Offline', go: () => this.setState({ offline: !s.offline }) }
+      ],
+
+      isHome: s.screen === 'home', isCapture: s.screen === 'capture', isProcessing: s.screen === 'processing',
+      isReceipt: s.screen === 'receipt', isReceipts: s.screen === 'receipts', isCollection: s.screen === 'collection',
+      isInsights: s.screen === 'insights', isItem: s.screen === 'item', isLists: s.screen === 'lists', isAccount: s.screen === 'account',
+      showNav: ['home','receipts','collection','insights','item','lists','account'].indexOf(s.screen) >= 0 || (s.screen === 'receipt' && !s.editing),
+      navHome: navItem('home'), navReceipts: navItem('receipts'), navInsights: navItem('insights'), navLists: navItem('lists'),
+      goHome: () => this.go('home'), goInsights: () => this.go('insights'), goAccount: () => this.go('account'),
+      goCapture: () => { this.go('capture'); this.setState({ camDenied: false, pages: 0 }); },
+
+      /* home */
+      monthTotal: money(monthSum),
+      monthMeta: plural(s.colls.reduce((a, x) => a + x.receipts, 0), 'receipt') + ' · +6.2% on June',
+      monthDelta: '+6.2% on June',
+      hasAttention: attnCount > 0,
+      attentionLabel: plural(attnCount, 'receipt') + ' need attention',
+      goAttention: () => { this.go('receipts'); this.setState({ attnOnly: true }); },
+      collections: s.colls.map(x => ({
+        name: x.name, amount: money(x.month),
+        open: () => { this.go('collection'); this.setState({ collKey: x.key, collFrom: 'home' }); }
+      })),
+
+      /* capture */
+      camDenied: s.camDenied, camOk: !s.camDenied,
+      grantCam: () => this.setState({ camDenied: false }),
+      viewfinderLines: VIEWFINDER,
+      shoot: () => this.setState(st => ({ pages: st.pages + 1 })),
+      clearPages: () => this.setState({ pages: 0 }),
+      hasPages: s.pages > 0, pageLabel: plural(s.pages, 'page') + ' captured',
+      doneLabel: s.pages > 1 ? 'Read ' + s.pages : 'Read',
+      doneBg: s.pages > 0 ? camAccent : 'rgba(242,234,217,.14)',
+      doneFg: s.pages > 0 ? camAccentFg : 'rgba(242,234,217,.45)',
+      doneCursor: s.pages > 0 ? 'pointer' : 'not-allowed',
+      startProcessing: () => { if (s.pages > 0) this.runProcessing(); },
+      importPhoto: () => { this.setState({ camDenied: false, pages: 1 }); this.runProcessing(); },
+      camAccent: camAccent, camAccentFg: camAccentFg,
+
+      /* processing */
+      procRunning: s.procRunning && !s.procFailed, procFailed: s.procFailed,
+      stages: stageDefs.map((label, i) => {
+        const isDone = i < s.procStage, active = i === s.procStage;
+        return { label: label, active: active, done: isDone, pending: !isDone,
+          dotFg: isDone || active ? key : divider, fg: isDone || active ? ink : dim };
+      }),
+      scanLines: ['HALTON FRESH','62 CARLYLE ST','------------','MILK 2L  3.60','BANANAS  4.84','SOURDOUGH 6.50','EGGS 12PK 8.20','TOMATOES 3.54','------------','TOTAL   31.73']
+        .map((text, i) => ({ text: text, o: i <= s.procStage * 2 + 1 ? 1 : 0.16, delay: (i * 0.09) + 's' })),
+      enterManually: () => this.enterByHand(),
+
+      /* receipt — one screen, two modes */
+      viewing: !s.editing, editing: s.editing,
+      receiptPad: s.editing ? '190px' : '32px',
+      receiptBack: () => this.leaveReceipt(),
+      startEdit: () => this.setState({ editing: true }),
+      editTitle: doc.store ? 'Check the details' : 'New receipt',
+      doc: {
+        store: doc.store, date: doc.date, total: doc.total, txn: doc.txn || '—',
+        totalStr: doc.total ? money(docTotal) : '—',
+        taxStr: doc.tax ? money(num(doc.tax)) : '—',
+        countStr: plural(doc.items.length, 'item'),
+        meta: doc.date + (doc.time ? ', ' + doc.time : ''),
+        collName: collName(doc.coll), file: doc.file || 'No photo'
+      },
+      viewRows: doc.items.map(i => ({ name: i.name, lineStr: money(num(i.line)) })),
+      editRows: doc.items.map(i => ({
+        name: i.name, lineStr: money(num(i.line)),
+        flagged: !!i.flag && P.showConfidence !== false, flag: 'Check this',
+        edit: () => this.setState({ sheetId: i.id }),
+        del: () => this.removeLine(i.id)
+      })),
+      itemCount: doc.items.length,
+      hasPhoto: !!doc.photo, photoLines: doc.photo || [],
+      setStore: e => this.patchDoc('store', e.target.value),
+      setDate: e => this.patchDoc('date', e.target.value),
+      setTotal: e => this.patchDoc('total', e.target.value),
+      collectionChips: s.colls.map(x => Object.assign({ name: x.name, pick: () => this.patchDoc('coll', x.key) }, chip(doc.coll === x.key))),
+      mismatch: doc.items.length > 0 && !balanced,
+      mismatchNote: 'Lines are ' + money(Math.abs(diff)) + (diff > 0 ? ' short of' : ' over') + ' the receipt total.'
+        + (flagged ? ' A line near the bottom was likely missed.' : ''),
+      diffLabel: doc.items.length === 0 ? 'No line items' : (balanced ? 'Lines match the total' : 'Difference'),
+      diffValue: doc.items.length === 0 ? '' : (balanced ? money(docTotal) : money(diff)),
+      diffFg: doc.items.length === 0 ? dim : (balanced ? good : warn),
+      saveLabel: !fileable ? 'Add ' + missing : (balanced || doc.items.length === 0 ? 'File in ' + collName(doc.coll) : 'File anyway'),
+      saveBg: fileable && (balanced || doc.items.length === 0) ? key : 'transparent',
+      saveFg: !fileable ? dim : (balanced || doc.items.length === 0 ? onKey : ink),
+      saveBd: !fileable ? divider : (balanced || doc.items.length === 0 ? key : divider),
+      saveReceipt: () => {
+        if (!fileable) { this.flash('Add ' + missing + ' first'); return; }
+        this.patchDoc('status', 'confirmed');
+        this.flash('Filed in ' + collName(doc.coll));
+        this.setState({ editing: false });
+      },
+      addRow: () => this.setState(st => {
+        const d = st.docs[st.openId];
+        const id = Date.now();
+        return { docs: Object.assign({}, st.docs, { [st.openId]: Object.assign({}, d, { items: d.items.concat([{ id: id, name: 'New line', qty: '1', line: '0.00' }]) }) }), sheetId: id };
+      }),
+      askDelete: () => this.setState({ confirmDelete: true }),
+      cancelDelete: () => this.setState({ confirmDelete: false }),
+      confirmDelete: s.confirmDelete,
+      doDelete: () => {
+        this.setState(st => ({ order: st.order.filter(x => x !== st.openId), confirmDelete: false }));
+        this.flash('Receipt deleted'); this.go(s.from === 'receipt' ? 'receipts' : s.from);
+      },
+      zoom: s.zoom, openZoom: () => this.setState({ zoom: true }), closeZoom: () => this.setState({ zoom: false }),
+
+      /* line-item sheet */
+      sheet: s.sheetId !== null,
+      sheetName: (doc.items.find(i => i.id === s.sheetId) || {}).name || '',
+      sheetQty: (doc.items.find(i => i.id === s.sheetId) || {}).qty || '',
+      sheetLine: (doc.items.find(i => i.id === s.sheetId) || {}).line || '',
+      sheetFlagged: !!(doc.items.find(i => i.id === s.sheetId) || {}).flag,
+      sheetNote: (doc.items.find(i => i.id === s.sheetId) || {}).flag || '',
+      setSheetName: e => this.patchLine(s.sheetId, 'name', e.target.value),
+      setSheetQty: e => this.patchLine(s.sheetId, 'qty', e.target.value),
+      setSheetLine: e => this.patchLine(s.sheetId, 'line', e.target.value),
+      closeSheet: () => this.setState({ sheetId: null }),
+      deleteFromSheet: () => this.removeLine(s.sheetId),
+
+      /* receipts */
+      attnCount: attnCount,
+      toggleAttention: () => this.setState({ attnOnly: !s.attnOnly }),
+      attnBg: s.attnOnly ? key : 'transparent', attnFg: s.attnOnly ? onKey : ink, attnBd: s.attnOnly ? key : divider,
+      listSummary: plural(listIds.length, 'receipt'),
+      list: listIds.map(id => rowFor(id, 'receipts')),
+      listEmpty: listIds.length === 0,
+
+      /* collection */
+      collBack: () => this.go(s.collFrom),
+      coll: {
+        name: cRec.name, amount: money(cRec.month), delta: cRec.delta + ' on June',
+        count: plural(cRec.receipts, 'receipt'),
+        avg: money(cRec.receipts ? cRec.month / cRec.receipts : 0),
+        share: Math.round((cRec.month / (monthSum || 1)) * 100) + '%',
+        bars: cSeries.map((v, i) => ({ label: MONTHS[i], h: Math.max(6, Math.round((v / cPeak) * 76)) + 'px', fill: barFill(i === 5) })),
+        receipts: collReceipts.map(id => rowFor(id, 'collection'))
+      },
+      collEmpty: collReceipts.length === 0,
+
+      /* insights */
+      bars: [1024,1103,998,1142,1094,1162].map((v, i) => ({ label: MONTHS[i], h: Math.round((v / 1200) * 76) + 'px', fill: barFill(i === 5) })),
+      movers: s.colls.slice().sort((a, b) => Math.abs(num(b.delta)) - Math.abs(num(a.delta))).slice(0, 4).map(x => ({
+        name: x.name, amount: money(x.month), delta: x.delta,
+        deltaFg: String(x.delta).indexOf('−') === 0 ? good : warn,
+        open: () => { this.go('collection'); this.setState({ collKey: x.key, collFrom: 'insights' }); }
+      })),
+      items: ITEMS.map((x, i) => {
+        const first = x.series[0], last = x.series[x.series.length - 1];
+        const pct = ((last - first) / first) * 100;
+        const flat = Math.abs(pct) < 0.5;
+        return { name: x.name, rhythm: x.coll + ' · ' + x.rhythm.toLowerCase(), price: money(last),
+          delta: flat ? 'steady' : (pct > 0 ? '+' : '−') + Math.abs(pct).toFixed(0) + '%',
+          deltaFg: flat ? dim : (pct > 0 ? warn : good),
+          open: () => { this.go('item'); this.setState({ itemIndex: i }); } };
+      }),
+
+      /* item */
+      item: {
+        name: it.name, price: money(iSeries[iSeries.length - 1]), unit: it.unit,
+        delta: iFlat ? 'steady since Dec' : (iPct >= 0 ? '+' : '−') + Math.abs(iPct).toFixed(1) + '% since Dec',
+        deltaFg: iFlat ? dim : (iPct > 1 ? warn : good),
+        hasChart: !iFlat,
+        bars: iSeries.map((v, i) => ({ value: v.toFixed(2), label: it.labels[i], h: Math.max(6, Math.round(((v - iFloor) / iSpan) * 60)) + 'px', fill: barFill(i === iSeries.length - 1) })),
+        rhythm: it.rhythm, count: plural(it.count, 'purchase'),
+        spent: money(it.count * it.per * (iSeries.reduce((a, b) => a + b, 0) / iSeries.length)),
+        stores: it.stores.map(x => ({ name: x[0], price: x[1], times: x[2],
+          fg: parseFloat(x[1].slice(1)) === Math.min.apply(null, prices) ? good : dim })),
+        valueHeadline: sameEverywhere ? 'Same price everywhere you buy it'
+          : (alreadyBest ? cheapest[0] + ' is your cheapest and your usual' : 'Buy it at ' + cheapest[0] + ' instead'),
+        valueNote: sameEverywhere ? 'Nothing to gain by switching stores.'
+          : (alreadyBest ? 'You would pay ' + money(gap) + ' more each time at ' + dearest[0] + '.' : money(gap) + ' cheaper each time you buy it.'),
+        showSaving: !sameEverywhere, saves: money(gap * it.perYear) + '/yr',
+        history: it.history.map(x => ({ date: x[0], store: x[1], price: x[2] })),
+        addToList: () => addNamed(it.name)
+      },
+
+      /* duplicate */
+      dupOpen: s.dupOpen,
+      discardDup: () => { this.setState(st => ({ order: st.order.filter(x => x !== st.openId), dupOpen: false })); this.flash('Duplicate discarded'); },
+      keepDup: () => { this.patchDoc('status', 'confirmed'); this.setState({ dupOpen: false }); this.flash('Both kept'); },
+
+      /* new collection */
+      newOpen: s.newOpen, newCollName: s.newCollName,
+      newCollection: () => this.setState({ newOpen: true, newCollName: '' }),
+      closeNew: () => this.setState({ newOpen: false }),
+      setNewCollName: e => this.setState({ newCollName: e.target.value }),
+      createCollection: () => {
+        const name = s.newCollName.trim();
+        if (!name) { this.setState({ newOpen: false }); return; }
+        const k = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        this.setState(st => ({ colls: st.colls.concat([{ key: k, name: name, month: 0, receipts: 0, delta: 'new' }]), newOpen: false }));
+        this.patchDoc('coll', k);
+      },
+
+      /* list */
+      toBuy: s.shopping.filter(x => !x.done).map(x => ({
+        name: x.name,
+        toggle: () => this.setState(st => ({ shopping: st.shopping.map(y => y.id === x.id ? Object.assign({}, y, { done: true }) : y) })),
+        del: () => this.setState(st => ({ shopping: st.shopping.filter(y => y.id !== x.id) }))
+      })),
+      done: s.shopping.filter(x => x.done).map(x => ({
+        name: x.name,
+        toggle: () => this.setState(st => ({ shopping: st.shopping.map(y => y.id === x.id ? Object.assign({}, y, { done: false }) : y) }))
+      })),
+      hasDone: s.shopping.some(x => x.done),
+      doneCount: s.shopping.filter(x => x.done).length,
+      newItem: s.newItem, setNewItem: e => this.setState({ newItem: e.target.value }),
+      onNewItemKey: e => { if (e.key === 'Enter' && s.newItem.trim()) { addNamed(s.newItem.trim()); this.setState({ newItem: '' }); } },
+      addShopping: () => { if (s.newItem.trim()) { addNamed(s.newItem.trim()); this.setState({ newItem: '' }); } },
+
+      /* account */
+      settings: [
+        { label: 'Members', value: 'Harleen, Ravi' },
+        { label: 'Currency and tax', value: 'AUD · GST 10%' },
+        { label: 'Processing', value: 'On device' },
+        { label: 'Keep receipt photos', value: 'Forever' },
+        { label: 'Larger text', value: 'System' }
+      ],
+      offlineLabel: s.offline ? 'Go back online' : 'Simulate offline',
+      toggleOffline: () => this.setState({ offline: !s.offline }),
+
+      toast: s.toast,
+      toastBottom: ['home','receipts','collection','insights','item','lists','account'].indexOf(s.screen) >= 0 || (s.screen === 'receipt' && !s.editing) ? '84px' : '24px'
+    };
+  }
+}
+
+</script>
+</body>
+</html>

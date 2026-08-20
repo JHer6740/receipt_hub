@@ -1,0 +1,68 @@
+/* ODS Typography — the type scale extracted from the ODS Field library.
+   Family: Noto Sans. Scale groups: Display, Headline, Title, Body, Label.
+   Values copied verbatim from Figma (line-heights are unitless ratios). */
+:root {
+  --font-family-base: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Raw size ramp (px) */
+  --font-size-10: 10px;
+  --font-size-12: 12px;
+  --font-size-14: 14px;
+  --font-size-15: 15px;
+  --font-size-16: 16px;
+  --font-size-18: 18px;
+  --font-size-20: 20px;
+  --font-size-24: 24px;
+  --font-size-34: 34px;
+  --font-size-48: 48px;
+  --font-size-60: 60px;
+  --font-size-96: 96px;
+
+  /* Semantic type roles: size / line-height / letter-spacing / weight */
+  --type-display-lg-size: 96px;   --type-display-lg-lh: 1.167;  --type-display-lg-ls: -1.5px;  --type-display-lg-weight: 300;
+  --type-display-md-size: 60px;   --type-display-md-lh: 1.2;    --type-display-md-ls: -0.5px;  --type-display-md-weight: 300;
+  --type-display-sm-size: 48px;   --type-display-sm-lh: 1.167;  --type-display-sm-ls: 0;       --type-display-sm-weight: 300;
+
+  --type-headline-lg-size: 34px;  --type-headline-lg-lh: 1.235; --type-headline-lg-ls: 0.25px; --type-headline-lg-weight: 400;
+  --type-headline-md-size: 24px;  --type-headline-md-lh: 1.334; --type-headline-md-ls: 0;      --type-headline-md-weight: 400;
+  --type-headline-sm-size: 20px;  --type-headline-sm-lh: 1.6;   --type-headline-sm-ls: 0.15px; --type-headline-sm-weight: 500;
+
+  --type-title-md-size: 16px;     --type-title-md-lh: 1.75;     --type-title-md-ls: 0.15px;    --type-title-md-weight: 500;
+  --type-title-lg-size: 14px;     --type-title-lg-lh: 1.57;     --type-title-lg-ls: 0.1px;     --type-title-lg-weight: 500;
+  --type-title-sm-size: 12px;     --type-title-sm-lh: 2.66;     --type-title-sm-ls: 1px;       --type-title-sm-weight: 500;
+
+  --type-body-lg-size: 16px;      --type-body-lg-lh: 1.5;       --type-body-lg-ls: 0.15px;     --type-body-lg-weight: 400;
+  --type-body-md-size: 14px;      --type-body-md-lh: 1.43;      --type-body-md-ls: 0.17px;     --type-body-md-weight: 400;
+  --type-body-sm-size: 12px;      --type-body-sm-lh: 1.66;      --type-body-sm-ls: 0.4px;      --type-body-sm-weight: 400;
+
+  --type-label-lg-size: 14px;     --type-label-lg-lh: 1.71;     --type-label-lg-ls: 0.17px;    --type-label-lg-weight: 500;
+  --type-label-md-size: 14px;     --type-label-md-lh: 1.5;      --type-label-md-ls: -0.25px;   --type-label-md-weight: 500;
+  --type-label-sm-size: 12px;     --type-label-sm-lh: 1.5;      --type-label-sm-ls: 0;         --type-label-sm-weight: 500;
+
+  /* Button label (from Button spec: Noto Sans 500 15px / 26px / 0.46px) */
+  --type-button-size: 15px;       --type-button-lh: 1.73;       --type-button-ls: 0.46px;      --type-button-weight: 500;
+}
+
+/* Utility classes — apply a full type role in one shot. */
+.ods-display-lg { font: var(--type-display-lg-weight) var(--type-display-lg-size)/var(--type-display-lg-lh) var(--font-family-base); letter-spacing: var(--type-display-lg-ls); }
+.ods-display-md { font: var(--type-display-md-weight) var(--type-display-md-size)/var(--type-display-md-lh) var(--font-family-base); letter-spacing: var(--type-display-md-ls); }
+.ods-display-sm { font: var(--type-display-sm-weight) var(--type-display-sm-size)/var(--type-display-sm-lh) var(--font-family-base); letter-spacing: var(--type-display-sm-ls); }
+.ods-headline-lg { font: var(--type-headline-lg-weight) var(--type-headline-lg-size)/var(--type-headline-lg-lh) var(--font-family-base); letter-spacing: var(--type-headline-lg-ls); }
+.ods-headline-md { font: var(--type-headline-md-weight) var(--type-headline-md-size)/var(--type-headline-md-lh) var(--font-family-base); letter-spacing: var(--type-headline-md-ls); }
+.ods-headline-sm { font: var(--type-headline-sm-weight) var(--type-headline-sm-size)/var(--type-headline-sm-lh) var(--font-family-base); letter-spacing: var(--type-headline-sm-ls); }
+.ods-title-md { font: var(--type-title-md-weight) var(--type-title-md-size)/var(--type-title-md-lh) var(--font-family-base); letter-spacing: var(--type-title-md-ls); }
+.ods-title-lg { font: var(--type-title-lg-weight) var(--type-title-lg-size)/var(--type-title-lg-lh) var(--font-family-base); letter-spacing: var(--type-title-lg-ls); }
+.ods-title-sm { font: var(--type-title-sm-weight) var(--type-title-sm-size)/var(--type-title-sm-lh) var(--font-family-base); letter-spacing: var(--type-title-sm-ls); text-transform: uppercase; }
+.ods-body-lg { font: var(--type-body-lg-weight) var(--type-body-lg-size)/var(--type-body-lg-lh) var(--font-family-base); letter-spacing: var(--type-body-lg-ls); }
+.ods-body-md { font: var(--type-body-md-weight) var(--type-body-md-size)/var(--type-body-md-lh) var(--font-family-base); letter-spacing: var(--type-body-md-ls); }
+.ods-body-sm { font: var(--type-body-sm-weight) var(--type-body-sm-size)/var(--type-body-sm-lh) var(--font-family-base); letter-spacing: var(--type-body-sm-ls); }
+.ods-label-lg { font: var(--type-label-lg-weight) var(--type-label-lg-size)/var(--type-label-lg-lh) var(--font-family-base); letter-spacing: var(--type-label-lg-ls); }
+.ods-label-md { font: var(--type-label-md-weight) var(--type-label-md-size)/var(--type-label-md-lh) var(--font-family-base); letter-spacing: var(--type-label-md-ls); }
+.ods-label-sm { font: var(--type-label-sm-weight) var(--type-label-sm-size)/var(--type-label-sm-lh) var(--font-family-base); letter-spacing: var(--type-label-sm-ls); }
+.ods-overline { font: var(--type-title-sm-weight) var(--type-title-sm-size)/var(--type-title-sm-lh) var(--font-family-base); letter-spacing: var(--type-title-sm-ls); text-transform: uppercase; }

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Home · Grocery Home{% endblock %}
+{% block content %}
+<header class="page-heading home-heading">
+  <div>
+    <p class="eyebrow">{{ today_label }}</p>
+    <h1>Your household,<br><em>at a glance.</em></h1>
+  </div>
+  <a class="button button-primary desktop-action" href="/upload">
+    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Add a receipt
+  </a>
+</header>
+
+{% if processing_jobs %}
+<section class="processing-strip" aria-labelledby="processing-title">
+  <div class="processing-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div>
+    <strong id="processing-title">Reading {{ processing_jobs|length }} receipt{% if processing_jobs|length != 1 %}s{% endif %}</strong>
+    <p>You can leave this page. Grocery Home will keep working.</p>
+  </div>
+  <a href="/receipts?status=processing">View progress</a>
+</section>
+{% endif %}
+
+<section class="month-ledger" aria-labelledby="month-spend-title">
+  <div class="month-primary">
+    <p class="metric-label" id="month-spend-title">Spent this month</p>
+    <p class="hero-money">{{ overview.month_spend }}</p>
+    <p class="metric-comparison {% if overview.month_delta_direction == 'down' %}is-good{% endif %}">
+      {% if overview.month_delta %}
+        {{ overview.month_delta }} from last month
+      {% else %}
+        Your first month in the ledger
+      {% endif %}
+    </p>
+  </div>
+  <div class="ledger-support">
+    <div>
+      <span>Next 30 days</span>
+      <strong>{{ overview.projected_30d }}</strong>
+      <small>Estimated household spend</small>
+    </div>
+    <div>
+      <span>Grocery trips</span>
+      <strong>{{ overview.receipt_count }}</strong>
+      <small>{{ overview.period_label }}</small>
+    </div>
+    <div>
+      <span>On the list</span>
+      <strong>{{ overview.active_list_count }}</strong>
+      <small>Shared with the household</small>
+    </div>
+  </div>
+  <div class="perforated-edge" aria-hidden="true"></div>
+</section>
+
+<div class="home-columns">
+  <section class="ledger-section needs-section" aria-labelledby="needs-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">From your buying rhythm</p>
+        <h2 id="needs-title">Needed soon</h2>
+      </div>
+      <a class="text-link" href="/shopping">Open list</a>
+    </div>
+
+    {% if suggestions %}
+    <ol class="need-list">
+      {% for item in suggestions %}
+      <li style="--index: {{ loop.index0 }}">
+        <span class="need-date">
+          <b>{{ item.due_day }}</b>
+          <small>{{ item.due_month }}</small>
+        </span>
+        <div class="need-copy">
+          <strong>{{ item.description }}</strong>
+          <span>{{ item.cadence_label }}</span>
+        </div>
+        <span class="need-cost">{{ item.estimated_cost }}</span>
+        <form method="post" action="/shopping/suggestions/{{ item.key }}/add">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="compact-button" type="submit">Add</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="empty-ledger">
+      <svg aria-hidden="true" viewBox="0 0 80 64"><path d="M13 12h54v42H13z"/><path d="M22 24h36M22 34h28M22 44h20"/><path class="accent" d="M58 8v10M53 13h10"/></svg>
+      <h3>Your rhythm is still forming</h3>
+      <p>Add a few grocery receipts and recurring staples will appear here.</p>
+      <a class="button button-secondary" href="/upload">Add a receipt</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <aside class="ledger-section category-section" aria-labelledby="category-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ overview.category_period }}</p>
+        <h2 id="category-title">Where it went</h2>
+      </div>
+      <a class="text-link" href="/trends">All trends</a>
+    </div>
+    {% if category_preview %}
+    <ul class="category-bars">
+      {% for category in category_preview %}
+      <li>
+        <div class="category-row">
+          <span>{{ category.name }}</span>
+          <strong>{{ category.amount }}</strong>
+        </div>
+        <span class="bar-track" aria-hidden="true"><i style="width: {{ category.percent }}%"></i></span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="quiet-copy">Category totals will appear after the first confirmed grocery receipt.</p>
+    {% endif %}
+  </aside>
+</div>
+
+<section class="ledger-section recent-section" aria-labelledby="recent-title">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Filed in the household ledger</p>
+      <h2 id="recent-title">Recent receipts</h2>
+    </div>
+    <a class="text-link" href="/receipts">See all</a>
+  </div>
+
+  {% if recent_receipts %}
+  <div class="receipt-ledger">
+    {% for receipt in recent_receipts %}
+    <a class="receipt-row" href="/receipts/{{ receipt.id }}">
+      <time datetime="{{ receipt.purchase_date }}">
+        <b>{{ receipt.day }}</b><span>{{ receipt.month }}</span>
+      </time>
+      <div>
+        <strong>{{ receipt.merchant }}</strong>
+        <span>{{ receipt.item_count }} item{% if receipt.item_count != 1 %}s{% endif %}{% if not receipt.is_grocery %} · not in grocery totals{% endif %}</span>
+      </div>
+      <span class="receipt-total">{{ receipt.total }}</span>
+      <svg aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6"/></svg>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-row">
+    <p>No confirmed receipts yet.</p>
+    <a class="text-link" href="/upload">Add the first one</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

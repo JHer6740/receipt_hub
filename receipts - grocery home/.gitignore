@@ -1,0 +1,14 @@
+.venv/
+*.py[cod]
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.interface-design/
+grocery_home.egg-info/
+instance/
+test-results/
+playwright-report/
+.acceptance-runtime/
+.pytest-codex-*/

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/fig-tokens.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/typography.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/tokens/base.css">
+<link rel="stylesheet" href="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/styles.css">
+<script src="_ds/orica-field-design-system-ods-44c53b1b-1bfb-4ada-a8e1-1cea87d07bc1/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#eceded;font-family:"Noto Sans",system-ui,sans-serif}
+a{color:var(--primary-main)}a:hover{color:var(--primary-dark)}
+:root{--gh-warn-fg:rgba(0,0,0,.9);--gh-input-bd:rgba(0,0,0,.23)}
+.dark{--text-secondary:rgba(244,244,244,.7);--divider:rgba(255,255,255,.12);--action-selected:rgba(255,255,255,.08);--background-paper-elevation-1:rgb(35,40,46);--components-alert-warning-background:rgba(255,138,29,.16);--warning-dark:rgb(255,164,80);--gh-warn-fg:rgb(244,244,244);--gh-input-bd:rgba(255,255,255,.3)}
+.s::-webkit-scrollbar{width:0;height:0}.s{scrollbar-width:none}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:48px;display:flex;gap:40px;align-items:flex-start;font-family:'Noto Sans',system-ui,sans-serif;color:rgba(25,28,32,.87)">
+
+<aside style="width:176px;flex:none;position:sticky;top:48px">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:rgba(25,28,32,.6);margin:0 8px 8px">Screens</div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ rail }}" as="r" hint-placeholder-count="9">
+<button onClick="{{ r.go }}" style="display:flex;align-items:center;width:100%;min-height:36px;padding:8px;border:0;border-radius:4px;background:{{ r.bg }};color:{{ r.fg }};font:inherit;font-size:14px;font-weight:{{ r.weight }};text-align:left;cursor:pointer">{{ r.label }}</button>
+</sc-for>
+</div>
+<div style="height:1px;background:rgba(0,0,0,.12);margin:24px 8px"></div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:rgba(25,28,32,.6);margin:0 8px 8px">States</div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ stateRail }}" as="r" hint-placeholder-count="6">
+<button onClick="{{ r.go }}" style="display:flex;align-items:center;width:100%;min-height:36px;padding:8px;border:0;border-radius:4px;background:transparent;color:rgba(25,28,32,.6);font:inherit;font-size:14px;text-align:left;cursor:pointer" style-hover="background:rgba(0,0,0,.04)">{{ r.label }}</button>
+</sc-for>
+</div>
+<div style="height:1px;background:rgba(0,0,0,.12);margin:24px 8px"></div>
+<button onClick="{{ toggleTheme }}" style="display:flex;align-items:center;width:100%;min-height:36px;padding:8px;border:0;border-radius:4px;background:transparent;color:var(--primary-main);font:inherit;font-size:14px;font-weight:500;text-align:left;cursor:pointer" style-hover="background:rgba(0,118,166,.08)">{{ themeLabel }}</button>
+</aside>
+
+<div style="flex:none;width:390px;height:844px;border-radius:20px;padding:8px;background:#191c20">
+<div class="{{ themeClass }}" style="width:100%;height:100%;border-radius:14px;overflow:hidden;position:relative;display:flex;flex-direction:column;background:var(--background-default);color:var(--text-primary)">
+
+<div style="height:36px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--text-secondary)">
+<span>4:12</span>
+<span>{{ networkLabel }}</span>
+</div>
+
+<div class="s" style="flex:1;overflow-y:auto">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 24px 32px">
+<div style="display:flex;align-items:center;justify-content:space-between;height:56px">
+<span style="font-size:20px;font-weight:500">Home</span>
+<button onClick="{{ goSettings }}" aria-label="Household settings" style="width:44px;height:44px;margin-right:-10px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="background:var(--action-hover)">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+</button>
+</div>
+<div style="margin-top:16px">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary)">Confirmed in July</div>
+<div style="font-size:44px;font-weight:300;line-height:1.15;font-variant-numeric:tabular-nums;margin-top:8px">$486.20</div>
+<div style="font-size:14px;color:var(--text-secondary);margin-top:4px;font-variant-numeric:tabular-nums">11 receipts · +8.4% on June</div>
+</div>
+<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ goPending }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;margin-top:24px;padding:14px 16px;border:0;border-radius:4px;background:var(--components-alert-warning-background);color:var(--gh-warn-fg);font:inherit;font-size:14px;text-align:left;cursor:pointer">
+<span style="flex:1">2 receipts need review</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex:none;opacity:.7"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"></path></svg>
+</button>
+</sc-if>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin:32px 0 0">Recent</div>
+<sc-for list="{{ recent }}" as="r" hint-placeholder-count="4">
+<button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:14px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.store }}</span>
+<span style="display:block;font-size:13px;color:{{ r.metaFg }};margin-top:3px">{{ r.line2 }}</span>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;flex:none">{{ r.total }}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCapture }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#191c20;color:#f4f4f4">
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 8px">
+<button onClick="{{ goHome }}" aria-label="Cancel" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+<span style="font-size:16px;font-weight:500">Scan receipt</span>
+<span style="width:44px"></span>
+</div>
+<sc-if value="{{ camDenied }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:32px">
+<div style="font-size:20px;font-weight:500">Camera access is off</div>
+<p style="font-size:14px;line-height:1.5;color:rgba(244,244,244,.7);margin:0">Receipts are read on this device. Nothing is uploaded.</p>
+<button onClick="{{ grantCam }}" style="min-height:48px;margin-top:8px;border-radius:8px;border:0;background:var(--odsoricablue-800);color:#fff;font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Open settings</button>
+<button onClick="{{ goGallery }}" style="min-height:48px;border-radius:8px;border:1px solid rgba(244,244,244,.4);background:transparent;color:#f4f4f4;font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Import from gallery</button>
+</div>
+</sc-if>
+<sc-if value="{{ camOk }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;position:relative;margin:0 16px;border-radius:8px;overflow:hidden;background:#23282e">
+<div style="position:absolute;inset:0;display:grid;place-items:center">
+<div style="width:60%;height:84%;background:#fff;padding:16px 14px;font-family:ui-monospace,monospace;font-size:8px;line-height:2;color:#191c20;overflow:hidden">HALTON FRESH MARKET<br>62 CARLYLE ST<br>------------------<br>MILK 2L 3.60<br>BANANAS 4.84<br>SOURDOUGH 6.50<br>EGGS 12PK 8.20<br>TOMATOES 3.54<br>DISHWASH 4.06<br>CHILLI 0.99<br>------------------<br>TOTAL 31.73</div>
+</div>
+<div style="position:absolute;inset:24px 32px;border:2px solid var(--odsoricablue-400);border-radius:4px;box-shadow:0 0 0 9999px rgba(25,28,32,.55)"></div>
+</div>
+<div style="flex:none;padding:16px 32px 8px;text-align:center;font-size:13px;color:rgba(244,244,244,.7)">Photograph long receipts in sections.</div>
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:8px 32px 28px">
+<button onClick="{{ goGallery }}" aria-label="Import from gallery" style="width:48px;height:48px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#f4f4f4;cursor:pointer">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"></path></svg>
+</button>
+<button onClick="{{ shoot }}" aria-label="Take photo" style="width:68px;height:68px;border-radius:50%;border:4px solid rgba(244,244,244,.9);background:var(--odsoricablue-800);cursor:pointer;padding:0"></button>
+<button onClick="{{ startProcessing }}" style="min-width:48px;height:48px;padding:0 8px;border:0;background:transparent;color:#f4f4f4;font:inherit;font-size:14px;font-weight:500;cursor:pointer">{{ shotLabel }}</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isProcessing }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;display:flex;flex-direction:column;padding:24px">
+<sc-if value="{{ procFailed }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px">
+<div style="font-size:20px;font-weight:500">Could not read this receipt</div>
+<p style="font-size:14px;line-height:1.55;color:var(--text-secondary);margin:0">The image was too dark to find product lines. The photo is saved.</p>
+<button onClick="{{ goCapture }}" style="min-height:48px;margin-top:8px;border-radius:8px;border:0;background:var(--primary-main);color:var(--primary-contrast);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Retake photo</button>
+<button onClick="{{ goReview }}" style="min-height:48px;border-radius:8px;border:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Enter manually</button>
+</div>
+</sc-if>
+<sc-if value="{{ procRunning }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;font-size:20px;font-weight:500">Reading receipt</div>
+<div style="flex:none;font-size:13px;color:var(--text-secondary);margin:4px 0 32px">Halton Fresh Market · on this device</div>
+<sc-for list="{{ stages }}" as="s" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:14px;min-height:44px">
+<span style="width:18px;height:18px;flex:none;display:grid;place-items:center;color:{{ s.dotFg }}">
+<sc-if value="{{ s.done }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg></sc-if>
+<sc-if value="{{ s.pending }}" hint-placeholder-val="{{ true }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span></sc-if>
+</span>
+<span style="flex:1;font-size:15px;color:{{ s.fg }}">{{ s.label }}</span>
+<sc-if value="{{ s.active }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-secondary);animation:blink 1.4s ease-in-out infinite">working</span></sc-if>
+</div>
+</sc-for>
+<div style="flex:1"></div>
+<p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px">You can leave — this continues in the background.</p>
+<button onClick="{{ goHome }}" style="min-height:48px;border-radius:8px;border:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Do this later</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 200px">
+<div style="display:flex;align-items:center;gap:4px;height:56px;padding:0 8px">
+<button onClick="{{ goLedger }}" aria-label="Back" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-primary);cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+</button>
+<span style="font-size:18px;font-weight:500">Review receipt</span>
+</div>
+<div style="padding:0 24px">
+<div style="display:flex;gap:24px;border-bottom:1px solid var(--divider);margin-bottom:24px">
+<button onClick="{{ tabItems }}" style="min-height:44px;padding:0 2px;border:0;border-bottom:2px solid {{ tabItemsBd }};background:transparent;color:{{ tabItemsFg }};font:inherit;font-size:14px;font-weight:500;cursor:pointer">Items · {{ itemCount }}</button>
+<button onClick="{{ tabImage }}" style="min-height:44px;padding:0 2px;border:0;border-bottom:2px solid {{ tabImageBd }};background:transparent;color:{{ tabImageFg }};font:inherit;font-size:14px;font-weight:500;cursor:pointer">Photo</button>
+</div>
+</div>
+
+<sc-if value="{{ showImageTab }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 24px">
+<button onClick="{{ openZoom }}" style="width:100%;border:1px solid var(--divider);border-radius:4px;background:#fff;padding:20px;cursor:pointer;font:inherit;text-align:left">
+<div style="font-family:ui-monospace,monospace;font-size:11px;line-height:2;color:#191c20">HALTON FRESH MARKET<br>62 CARLYLE ST, BRUNSWICK<br>------------------------------<br>26/07/26 16:08 TXN 0192-4471<br>MILK FULL CREAM 2L 3.60<br>BANANAS 1.24kg 4.84<br>SOURDOUGH LOAF 6.50<br>EGGS FREE RANGE 8.20<br>TOMATOES ROMA 3.54<br>D1SHWASH L1QU1D 4.06<br>CHILLI LOOSE 0.99<br>------------------------------<br>TOTAL 31.73</div>
+</button>
+<div style="font-size:13px;color:var(--text-secondary);margin-top:8px">Tap to zoom · IMG_4821.HEIC</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showItemsTab }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 24px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<label style="font-size:12px;color:var(--text-secondary)">Store<input value="{{ hdr.store }}" onChange="{{ setStore }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<div style="display:flex;gap:12px">
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Date<input value="{{ hdr.date }}" onChange="{{ setDate }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<label style="width:110px;font-size:12px;color:var(--text-secondary)">Total<input value="{{ hdr.total }}" onChange="{{ setTotal }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+</div>
+</div>
+<button onClick="{{ toggleMore }}" style="min-height:44px;margin-top:4px;padding:0;border:0;background:transparent;color:var(--primary-main);font:inherit;font-size:14px;font-weight:500;cursor:pointer">{{ moreLabel }}</button>
+<sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<label style="font-size:12px;color:var(--text-secondary)">Transaction<input value="{{ hdr.txn }}" onChange="{{ setTxn }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<div style="display:flex;gap:12px">
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Subtotal<input value="{{ hdr.subtotal }}" onChange="{{ setSubtotal }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">GST<input value="{{ hdr.gst }}" onChange="{{ setGst }}" style="display:block;width:100%;min-height:44px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+</div>
+<button onClick="{{ toggleGroceries }}" style="display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;padding:0;border:0;background:transparent;color:var(--text-primary);font:inherit;font-size:15px;cursor:pointer;text-align:left">
+<span>Count as groceries</span>
+<span style="width:36px;height:20px;flex:none;border-radius:10px;background:{{ grocTrack }};position:relative;display:inline-block;transition:background .15s ease">
+<span style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s ease;transform:translateX({{ grocKnob }})"></span>
+</span>
+</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ mismatch }}" hint-placeholder-val="{{ true }}">
+<div style="margin:24px 0 0;padding:14px 16px;border-radius:4px;background:var(--components-alert-warning-background);color:var(--gh-warn-fg);font-size:13.5px;line-height:1.5">Lines are $0.99 short of the receipt total. A line near the bottom was likely missed.</div>
+</sc-if>
+
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin:32px 0 0">Products</div>
+<sc-for list="{{ rows }}" as="it" hint-placeholder-count="6">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--divider)">
+<button onClick="{{ it.edit }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:68px;padding:14px 0;border:0;background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.name }}</span>
+<span style="display:block;font-size:13px;color:{{ it.subFg }};margin-top:3px;font-variant-numeric:tabular-nums">{{ it.sub }}</span>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;flex:none">{{ it.lineStr }}</span>
+</button>
+<button onClick="{{ it.del }}" aria-label="Delete line" style="width:44px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="color:var(--error-main)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+</button>
+</div>
+</sc-for>
+<button onClick="{{ addRow }}" style="width:100%;min-height:48px;margin-top:16px;border:1px solid var(--divider);border-radius:8px;background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer" style-hover="background:var(--primary-states-hover)">Add product line</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLedger }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="padding:0 24px;font-size:20px;font-weight:500;height:56px;display:flex;align-items:center">Receipts</div>
+<div class="s" style="display:flex;gap:8px;overflow-x:auto;padding:0 24px 16px">
+<sc-for list="{{ filters }}" as="f" hint-placeholder-count="6">
+<button onClick="{{ f.go }}" style="flex:none;min-height:32px;padding:0 12px;border-radius:16px;border:1px solid {{ f.bd }};background:{{ f.bg }};color:{{ f.fg }};font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">{{ f.label }}</button>
+</sc-for>
+</div>
+<div style="padding:0 24px">
+<sc-for list="{{ ledger }}" as="r" hint-placeholder-count="6">
+<button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:14px;width:100%;min-height:76px;padding:14px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+<span style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.store }}</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;flex:none">{{ r.total }}</span>
+</span>
+<span style="display:block;font-size:13px;color:var(--text-secondary);margin-top:4px">{{ r.meta }}</span>
+<span style="display:block;font-size:12px;color:{{ r.statusFg }};margin-top:4px">{{ r.statusLine }}</span>
+</span>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{ ledgerEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:64px 32px;text-align:center">
+<div style="font-size:16px;font-weight:500;margin-bottom:8px">No receipts here</div>
+<p style="font-size:14px;color:var(--text-secondary);margin:0 0 24px">Nothing matches this filter.</p>
+<button onClick="{{ clearFilter }}" style="min-height:44px;padding:0 20px;border-radius:8px;border:1px solid var(--divider);background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Show all</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="display:flex;align-items:center;gap:4px;height:56px;padding:0 8px">
+<button onClick="{{ goLedger }}" aria-label="Back" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-primary);cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+</button>
+<span style="flex:1"></span>
+<button onClick="{{ goReview }}" style="min-height:44px;padding:0 12px;border:0;background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;cursor:pointer">Edit</button>
+<button onClick="{{ askDelete }}" aria-label="Delete receipt" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="color:var(--error-main)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+</button>
+</div>
+<div style="padding:0 24px">
+<div style="font-size:20px;font-weight:500">Fernway Grocer</div>
+<div style="font-size:13px;color:var(--text-secondary);margin-top:4px">24 Jul 2026, 5:41 pm · 0188-2210</div>
+<div style="font-size:40px;font-weight:300;font-variant-numeric:tabular-nums;margin-top:20px">$86.40</div>
+<div style="display:flex;gap:28px;margin:20px 0 8px;padding:14px 0;border-top:1px solid var(--divider);border-bottom:1px solid var(--divider);font-size:13px;font-variant-numeric:tabular-nums;color:var(--text-secondary)">
+<span>GST $7.85</span><span>Saved $4.20</span><span>22 items</span>
+</div>
+<sc-for list="{{ detailItems }}" as="d" hint-placeholder-count="6">
+<div style="display:flex;align-items:baseline;gap:12px;min-height:60px;padding:14px 0;border-bottom:1px solid var(--divider)">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px">{{ d.name }}</span>
+<span style="display:block;font-size:13px;color:var(--text-secondary);margin-top:3px;font-variant-numeric:tabular-nums">{{ d.sub }}</span>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums">{{ d.total }}</span>
+</div>
+</sc-for>
+<button onClick="{{ openZoom }}" style="width:100%;min-height:48px;margin-top:20px;border:1px solid var(--divider);border-radius:8px;background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">View original photo</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isShopping }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 24px 32px">
+<div style="font-size:20px;font-weight:500;height:56px;display:flex;align-items:center">Shopping</div>
+<div style="display:flex;gap:8px;margin-bottom:8px">
+<input placeholder="Add an item" value="{{ newItem }}" onChange="{{ setNewItem }}" onKeyDown="{{ onNewItemKey }}" style="flex:1;min-height:48px;padding:0 14px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px">
+<button onClick="{{ addShopping }}" aria-label="Add item" style="width:48px;height:48px;flex:none;display:grid;place-items:center;border-radius:4px;border:0;background:var(--primary-main);color:var(--primary-contrast);cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+</button>
+</div>
+<sc-for list="{{ toBuy }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--divider)">
+<button onClick="{{ s.toggle }}" style="flex:1;display:flex;align-items:center;gap:16px;min-height:64px;padding:12px 0;border:0;background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="width:20px;height:20px;flex:none;border-radius:2px;border:2px solid var(--text-secondary)"></span>
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:16px">{{ s.name }}</span>
+<span style="display:block;font-size:13px;color:var(--text-secondary);margin-top:2px">{{ s.meta }}</span>
+</span>
+</button>
+<button onClick="{{ s.del }}" aria-label="Remove item" style="width:44px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--text-secondary);cursor:pointer" style-hover="color:var(--error-main)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+</button>
+</div>
+</sc-for>
+<sc-if value="{{ showSuggestions }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:28px">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px">Bought regularly</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ suggestions }}" as="g" hint-placeholder-count="3">
+<button onClick="{{ g.add }}" style="min-height:36px;padding:0 12px;border-radius:16px;border:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:13px;cursor:pointer" style-hover="background:var(--action-hover)">{{ g.name }}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin:32px 0 0">In the trolley · {{ doneCount }}</div>
+<sc-for list="{{ done }}" as="s" hint-placeholder-count="2">
+<button onClick="{{ s.toggle }}" style="display:flex;align-items:center;gap:16px;width:100%;min-height:56px;padding:12px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-secondary);font:inherit;text-align:left;cursor:pointer">
+<span style="width:20px;height:20px;flex:none;border-radius:2px;background:var(--primary-main);color:var(--primary-contrast);display:grid;place-items:center">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>
+</span>
+<span style="flex:1;font-size:16px;text-decoration:line-through">{{ s.name }}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTrends }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 0 32px">
+<div style="padding:0 24px;font-size:20px;font-weight:500;height:56px;display:flex;align-items:center">Trends</div>
+<div style="display:flex;gap:24px;padding:0 24px;border-bottom:1px solid var(--divider)">
+<sc-for list="{{ trendTabs }}" as="t" hint-placeholder-count="3">
+<button onClick="{{ t.go }}" style="min-height:44px;padding:0 2px;border:0;border-bottom:2px solid {{ t.bd }};background:transparent;color:{{ t.fg }};font:inherit;font-size:14px;font-weight:500;cursor:pointer">{{ t.label }}</button>
+</sc-for>
+</div>
+<div style="padding:24px 24px 0">
+<sc-if value="{{ trendSpend }}" hint-placeholder-val="{{ true }}">
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary)">July so far</div>
+<div style="font-size:40px;font-weight:300;font-variant-numeric:tabular-nums;margin-top:8px">$486.20</div>
+<div style="font-size:14px;color:var(--text-secondary);margin-top:4px">+8.4% on June</div>
+<div style="display:flex;align-items:flex-end;gap:12px;height:104px;margin-top:28px">
+<sc-for list="{{ bars }}" as="b" hint-placeholder-count="6">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+<div style="width:100%;background:{{ b.fill }};height:{{ b.h }}"></div>
+<span style="font-size:12px;color:var(--text-secondary)">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+<div style="font-size:12px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--text-secondary);margin:36px 0 0">Categories</div>
+<sc-for list="{{ cats }}" as="c" hint-placeholder-count="6">
+<button onClick="{{ goLedger }}" style="display:flex;align-items:baseline;justify-content:space-between;width:100%;min-height:52px;padding:14px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;text-align:left;cursor:pointer">
+<span>{{ c.name }}</span>
+<span style="font-variant-numeric:tabular-nums">{{ c.amount }} <span style="font-size:13px;color:var(--text-secondary);margin-left:6px">{{ c.delta }}</span></span>
+</button>
+</sc-for>
+</sc-if>
+<sc-if value="{{ trendProducts }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ freq }}" as="f" hint-placeholder-count="5">
+<button onClick="{{ goDetail }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:14px 0;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;text-align:left;cursor:pointer">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px">{{ f.name }}</span>
+<span style="display:block;font-size:13px;color:var(--text-secondary);margin-top:3px">{{ f.rhythm }}</span>
+</span>
+<span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--text-secondary)">{{ f.count }}</span>
+</button>
+</sc-for>
+</sc-if>
+<sc-if value="{{ trendPrices }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ prices }}" as="p" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;padding:14px 0;border-bottom:1px solid var(--divider)">
+<span style="flex:1;min-width:0">
+<span style="display:block;font-size:15px">{{ p.name }}</span>
+<span style="display:block;font-size:13px;color:var(--text-secondary);margin-top:3px;font-variant-numeric:tabular-nums">{{ p.from }} → {{ p.to }}</span>
+</span>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;color:{{ p.fg }}">{{ p.delta }}</span>
+</div>
+</sc-for>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 24px 32px">
+<div style="font-size:20px;font-weight:500;height:56px;display:flex;align-items:center">Household</div>
+<sc-for list="{{ settings }}" as="s" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 0;border-bottom:1px solid var(--divider)">
+<span style="font-size:15px">{{ s.label }}</span>
+<span style="font-size:14px;color:var(--text-secondary);flex:none">{{ s.value }}</span>
+</div>
+</sc-for>
+<button onClick="{{ toggleOffline }}" style="min-height:44px;margin-top:24px;padding:0 20px;border-radius:8px;border:1px solid var(--divider);background:transparent;color:var(--primary-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Simulate offline</button>
+</div>
+</sc-if>
+
+</div>
+
+<sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;bottom:0;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);padding:16px 24px 24px">
+<div style="display:flex;justify-content:space-between;font-size:13px;font-variant-numeric:tabular-nums;color:var(--text-secondary)"><span>Items</span><span>{{ itemsTotal }}</span></div>
+<div style="display:flex;justify-content:space-between;font-size:13px;font-variant-numeric:tabular-nums;color:var(--text-secondary);margin-top:6px"><span>Receipt</span><span>{{ receiptTotal }}</span></div>
+<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:10px;padding-top:10px;border-top:1px solid var(--divider);color:{{ diffFg }}"><span>{{ diffLabel }}</span><span>{{ diffValue }}</span></div>
+<button onClick="{{ confirmReceipt }}" style="width:100%;min-height:48px;margin-top:16px;border-radius:8px;border:1px solid {{ saveBd }};background:{{ saveBg }};color:{{ saveFg }};font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">{{ saveLabel }}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;height:68px;background:var(--background-paper-elevation-1);border-top:1px solid var(--divider);display:flex;align-items:center">
+<button onClick="{{ navHome.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navHome.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+<span style="font-size:11px;font-weight:500">Home</span>
+</button>
+<button onClick="{{ navLedger.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navLedger.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 3.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5zM19 19.09H5V4.91h14v14.18zM6 15h12v2H6zm0-4h12v2H6zm0-4h12v2H6z"></path></svg>
+<span style="font-size:11px;font-weight:500">Receipts</span>
+</button>
+<div style="flex:1;display:flex;justify-content:center">
+<button onClick="{{ goCapture }}" aria-label="Scan a receipt" style="width:56px;height:56px;display:grid;place-items:center;margin-top:-20px;border-radius:50%;border:0;background:var(--primary-main);color:var(--primary-contrast);cursor:pointer;box-shadow:0 3px 5px rgba(0,0,0,.2),0 6px 10px rgba(0,0,0,.14)">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9zm3 15a5 5 0 110-10 5 5 0 010 10zm0-2a3 3 0 100-6 3 3 0 000 6z"></path></svg>
+</button>
+</div>
+<button onClick="{{ navShopping.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navShopping.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18a2 2 0 100 4 2 2 0 000-4zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96a2 2 0 002 2h12v-2H7.42a.25.25 0 01-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0020 4H5.21l-.94-2H1zm16 16a2 2 0 100 4 2 2 0 000-4z"></path></svg>
+<span style="font-size:11px;font-weight:500">Shopping</span>
+</button>
+<button onClick="{{ navTrends.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:56px;justify-content:center;border:0;background:transparent;font:inherit;cursor:pointer;color:{{ navTrends.fg }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"></path></svg>
+<span style="font-size:11px;font-weight:500">Trends</span>
+</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end">
+<div class="s" style="width:100%;background:var(--background-paper-elevation-1);border-radius:8px 8px 0 0;padding:24px;max-height:88%;overflow:auto">
+<div style="font-size:18px;font-weight:500;margin-bottom:20px">Edit line</div>
+<sc-if value="{{ sheetAttention }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:13.5px;line-height:1.5;background:var(--components-alert-warning-background);color:var(--gh-warn-fg);border-radius:4px;padding:12px 14px;margin-bottom:20px">{{ sheetNote }}</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:16px">
+<label style="font-size:12px;color:var(--text-secondary)">Description<input value="{{ sheetName }}" onChange="{{ setSheetName }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+<div style="display:flex;gap:12px">
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Quantity<input value="{{ sheetQty }}" onChange="{{ setSheetQty }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+<label style="width:88px;font-size:12px;color:var(--text-secondary)">Unit<input value="{{ sheetUnit }}" onChange="{{ setSheetUnit }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px"></label>
+</div>
+<div style="display:flex;gap:12px">
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Unit price<input value="{{ sheetPrice }}" onChange="{{ setSheetPrice }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+<label style="flex:1;font-size:12px;color:var(--text-secondary)">Line total<input value="{{ sheetLine }}" onChange="{{ setSheetLine }}" style="display:block;width:100%;min-height:48px;margin-top:4px;padding:0 12px;border:1px solid var(--gh-input-bd);border-radius:4px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;font-variant-numeric:tabular-nums"></label>
+</div>
+<div>
+<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">Category</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ categories }}" as="c" hint-placeholder-count="6">
+<button onClick="{{ c.pick }}" style="min-height:32px;padding:0 12px;border-radius:16px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:inherit;font-size:13px;cursor:pointer">{{ c.name }}</button>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="display:flex;gap:12px;margin-top:24px">
+<button onClick="{{ deleteFromSheet }}" style="min-height:48px;padding:0 20px;border-radius:8px;border:1px solid var(--divider);background:transparent;color:var(--error-main);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Delete</button>
+<button onClick="{{ closeSheet }}" style="flex:1;min-height:48px;border-radius:8px;border:0;background:var(--primary-main);color:var(--primary-contrast);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Done</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ zoom }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#191c20;display:flex;flex-direction:column">
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 8px;color:#f4f4f4">
+<button onClick="{{ closeZoom }}" aria-label="Close" style="width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+<span style="font-size:13px;color:rgba(244,244,244,.7)">Pinch to zoom</span><span style="width:44px"></span>
+</div>
+<div class="s" style="flex:1;overflow:auto;display:grid;place-items:center;padding:16px">
+<div style="width:300px;background:#fff;padding:24px 20px;font-family:ui-monospace,monospace;font-size:12px;line-height:2;color:#191c20">HALTON FRESH MARKET<br>62 CARLYLE ST, BRUNSWICK<br>------------------------------<br>26/07/26 16:08 TXN 0192-4471<br>MILK FULL CREAM 2L 3.60<br>BANANAS 1.24kg 4.84<br>SOURDOUGH LOAF 6.50<br>EGGS FREE RANGE 8.20<br>TOMATOES ROMA 3.54<br>D1SHWASH L1QU1D 4.06<br>CHILLI LOOSE 0.99<br>------------------------------<br>TOTAL 31.73</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ dupOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:24px">
+<div style="width:100%;background:var(--background-paper-elevation-1);border-radius:8px;padding:24px">
+<div style="font-size:18px;font-weight:500;margin-bottom:10px">Possible duplicate</div>
+<p style="font-size:14px;line-height:1.55;color:var(--text-secondary);margin:0 0 24px">Fernway Grocer, $86.40, 22 items — already recorded two minutes earlier.</p>
+<div style="display:flex;flex-direction:column;gap:12px">
+<button onClick="{{ closeDup }}" style="min-height:48px;border-radius:8px;border:0;background:var(--primary-main);color:var(--primary-contrast);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Discard the new one</button>
+<button onClick="{{ closeDup }}" style="min-height:48px;border-radius:8px;border:1px solid var(--divider);background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Keep both</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ confirmDelete }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:24px">
+<div style="width:100%;background:var(--background-paper-elevation-1);border-radius:8px;padding:24px">
+<div style="font-size:18px;font-weight:500;margin-bottom:10px">Delete this receipt?</div>
+<p style="font-size:14px;line-height:1.55;color:var(--text-secondary);margin:0 0 24px">Its 22 products leave trends and product history.</p>
+<div style="display:flex;gap:8px;justify-content:flex-end">
+<button onClick="{{ cancelDelete }}" style="min-height:44px;padding:0 16px;border-radius:8px;border:0;background:transparent;color:var(--text-primary);font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Cancel</button>
+<button onClick="{{ doDelete }}" style="min-height:44px;padding:0 16px;border-radius:8px;border:0;background:var(--error-main);color:#fff;font:inherit;font-size:15px;font-weight:500;letter-spacing:.46px;cursor:pointer">Delete</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:24px;right:24px;bottom:84px;background:#323232;color:#fff;border-radius:4px;padding:14px 16px;font-size:14px">{{ toast }}</div>
+</sc-if>
+
+</div>
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;},&quot;showConfidence&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;suggestions&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const CATS = ['Produce','Dairy','Bakery','Pantry','Meat','Household'];
+const money = n => '$' + (Math.round(n * 100) / 100).toFixed(2);
+
+class Component extends DCLogic {
+  state = {
+    screen: 'home', themeOverride: null, reviewTab: 'items', ledgerFilter: 'all',
+    trendsTab: 'spend', procStage: 0, procRunning: true, procFailed: false, moreOpen: false,
+    zoom: false, sheetId: null, dupOpen: false, offline: false, camDenied: false,
+    confirmDelete: false, toast: null, shots: 1, newItem: '', groceries: true,
+    hdr: { store: 'Halton Fresh Market', date: '26 Jul 2026', txn: '0192-4471', subtotal: '28.85', gst: '2.88', total: '31.73' },
+    items: [
+      { id: 1, name: 'Milk full cream 2L', qty: '1', unit: 'ea', price: '3.60', line: '3.60', cat: 'Dairy' },
+      { id: 2, name: 'Bananas Cavendish', qty: '1.24', unit: 'kg', price: '3.90', line: '4.84', cat: 'Produce' },
+      { id: 3, name: 'Sourdough loaf', qty: '1', unit: 'ea', price: '6.50', line: '6.50', cat: 'Bakery' },
+      { id: 4, name: 'Eggs free range 12pk', qty: '1', unit: 'ea', price: '8.20', line: '8.20', cat: 'Dairy', attention: 'The price was smudged — we read $8.20.' },
+      { id: 5, name: 'Tomatoes Roma', qty: '0.60', unit: 'kg', price: '5.90', line: '3.54', cat: 'Produce' },
+      { id: 6, name: 'D1shwash l1qu1d', qty: '1', unit: 'ea', price: '4.06', line: '4.06', cat: 'Household', attention: 'Two characters were unclear.' }
+    ],
+    shopping: [
+      { id: 1, name: 'Milk full cream 2L', meta: '2 · Halton Fresh', done: false },
+      { id: 2, name: 'Coffee beans 250g', meta: '1 pack', done: false },
+      { id: 3, name: 'Dish sponges', meta: '1 pack of 4', done: false },
+      { id: 4, name: 'Baby spinach 120g', meta: '1 bag', done: false },
+      { id: 5, name: 'Bananas', meta: '1 kg', done: true },
+      { id: 6, name: 'Sourdough loaf', meta: '1 ea', done: true }
+    ]
+  };
+
+  componentWillUnmount() { clearInterval(this._t); clearTimeout(this._toast); }
+
+  runProcessing() {
+    clearInterval(this._t);
+    this.setState({ screen: 'processing', procStage: 0, procRunning: true, procFailed: false });
+    this._t = setInterval(() => {
+      this.setState(s => {
+        if (s.screen !== 'processing') { clearInterval(this._t); return null; }
+        if (s.procStage >= 4) { clearInterval(this._t); return { screen: 'review', reviewTab: 'items' }; }
+        return { procStage: s.procStage + 1 };
+      });
+    }, 1100);
+  }
+
+  go(screen) { clearInterval(this._t); this.setState({ screen, zoom: false, sheetId: null, dupOpen: false, confirmDelete: false }); }
+  flash(msg) { clearTimeout(this._toast); this.setState({ toast: msg }); this._toast = setTimeout(() => this.setState({ toast: null }), 2600); }
+  patch(id, key, v) { this.setState(s => ({ items: s.items.map(i => i.id === id ? Object.assign({}, i, { [key]: v }) : i) })); }
+
+  renderVals() {
+    const s = this.state, P = this.props;
+    const theme = s.themeOverride || P.theme || 'light';
+    const dark = theme === 'dark';
+    const ink = dark ? '#f4f4f4' : 'rgba(25,28,32,.87)';
+    const dim = dark ? 'rgba(244,244,244,.7)' : 'rgba(25,28,32,.6)';
+    const blue = dark ? 'rgb(128,201,231)' : 'rgb(0,118,166)';
+    const onBlue = dark ? 'rgba(0,0,0,.87)' : '#fff';
+    const green = dark ? 'rgb(174,213,129)' : 'rgb(104,159,56)';
+    const amber = dark ? 'rgb(255,164,80)' : 'rgb(191,97,0)';
+    const divider = dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)';
+    const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
+
+    const itemsSum = s.items.reduce((a, i) => a + num(i.line), 0);
+    const receiptTotal = num(s.hdr.total);
+    const diff = Math.round((receiptTotal - itemsSum) * 100) / 100;
+    const balanced = Math.abs(diff) < 0.005;
+    const showConf = P.showConfidence !== false;
+
+    const screens = [['home','Home'],['capture','Capture'],['processing','Processing'],['review','Review'],['ledger','Receipts'],['detail','Receipt detail'],['shopping','Shopping'],['trends','Trends'],['settings','Household']];
+    const rail = screens.map(([k, label]) => ({
+      label, bg: s.screen === k ? 'rgba(0,118,166,.08)' : 'transparent',
+      fg: s.screen === k ? 'rgb(0,118,166)' : 'rgba(25,28,32,.87)',
+      weight: s.screen === k ? '500' : '400',
+      go: () => (k === 'processing' ? this.runProcessing() : this.go(k))
+    }));
+
+    const stateRail = [
+      { label: 'Duplicate', go: () => { this.go('ledger'); this.setState({ dupOpen: true }); } },
+      { label: 'Read failed', go: () => { this.go('processing'); this.setState({ procRunning: false, procFailed: true }); } },
+      { label: 'Camera denied', go: () => { this.go('capture'); this.setState({ camDenied: true }); } },
+      { label: 'Empty filter', go: () => { this.go('ledger'); this.setState({ ledgerFilter: 'empty' }); } },
+      { label: 'Delete confirm', go: () => { this.go('detail'); this.setState({ confirmDelete: true }); } },
+      { label: s.offline ? 'Go online' : 'Offline', go: () => this.setState({ offline: !s.offline }) }
+    ];
+
+    const stageDefs = ['Preparing image', 'Finding receipt sections', 'Reading products and prices', 'Checking totals', 'Preparing review'];
+    const stages = stageDefs.map((label, i) => {
+      const isDone = i < s.procStage, active = i === s.procStage;
+      return { label, active, done: isDone, pending: !isDone,
+        dotFg: isDone ? blue : (active ? blue : divider),
+        fg: isDone || active ? ink : dim };
+    });
+
+    const statusFg = k => k === 'confirmed' ? dim : (k === 'processing' ? dim : amber);
+    const allLedger = [
+      { store: 'Halton Fresh Market', total: '$31.73', meta: '26 Jul · 6 products', status: 'Needs review', source: 'IMG_4821.HEIC', kind: 'review', go: () => this.go('review') },
+      { store: 'Fernway Grocer', total: '$86.40', meta: '24 Jul · 22 products', status: 'Confirmed', source: 'Camera', kind: 'confirmed', go: () => this.go('detail') },
+      { store: 'Corner Providore', total: '$12.85', meta: '23 Jul · reading', status: 'Processing', source: 'IMG_4790.HEIC', kind: 'processing', go: () => this.runProcessing() },
+      { store: 'Fernway Grocer', total: '$86.40', meta: '22 Jul · 22 products', status: 'Possible duplicate', source: 'Gallery', kind: 'duplicate', go: () => this.setState({ dupOpen: true }) },
+      { store: 'Halton Fresh Market', total: '—', meta: '19 Jul · could not be read', status: 'Failed', source: 'scan_0192.pdf', kind: 'failed', go: () => { this.go('processing'); this.setState({ procRunning: false, procFailed: true }); } },
+      { store: 'Halton Fresh Market', total: '$44.10', meta: '17 Jul · 12 products', status: 'Confirmed', source: 'Camera', kind: 'confirmed', go: () => this.go('detail') }
+    ].map(r => Object.assign({}, r, {
+      statusFg: statusFg(r.kind),
+      statusLine: r.status + ' · ' + r.source,
+      metaFg: r.kind === 'confirmed' ? dim : amber,
+      line2: r.kind === 'confirmed' ? r.meta : r.meta + ' · ' + r.status
+    }));
+
+    const f = s.ledgerFilter;
+    const ledger = f === 'all' ? allLedger : allLedger.filter(r => r.kind === f);
+    const chip = on => ({ bg: on ? blue : 'transparent', fg: on ? onBlue : ink, bd: on ? blue : divider });
+    const filters = [['all','All'],['review','Needs review'],['confirmed','Confirmed'],['processing','Processing'],['duplicate','Duplicate'],['failed','Failed']]
+      .map(([k, label]) => Object.assign({ label, go: () => this.setState({ ledgerFilter: k }) }, chip(f === k)));
+
+    const rows = s.items.map(i => {
+      const attention = showConf && !!i.attention;
+      const suspect = !balanced && !i.attention && i.id === 6;
+      const base = i.unit === 'kg' ? i.qty + ' kg @ ' + money(num(i.price)) + '/kg' : i.qty + ' × ' + money(num(i.price));
+      return {
+        name: i.name,
+        sub: attention ? base + ' · check this' : (suspect ? base + ' · possible cause' : base + ' · ' + i.cat),
+        subFg: attention || suspect ? amber : dim,
+        lineStr: money(num(i.line)),
+        edit: () => this.setState({ sheetId: i.id }),
+        del: () => this.setState(st => ({ items: st.items.filter(x => x.id !== i.id) }))
+      };
+    });
+
+    const sheetItem = s.items.find(i => i.id === s.sheetId) || null;
+    const categories = CATS.map(name => Object.assign({ name, pick: () => this.patch(s.sheetId, 'cat', name) }, chip(sheetItem && sheetItem.cat === name)));
+
+    const barVals = [402, 431, 388, 455, 449, 486];
+    const labels = ['Feb','Mar','Apr','May','Jun','Jul'];
+    const bars = barVals.map((v, i) => ({ label: labels[i], h: Math.round((v / 500) * 84) + 'px', fill: i === 5 ? blue : (dark ? 'rgba(244,244,244,.18)' : 'rgba(25,28,32,.14)') }));
+
+    const cats = [
+      { name: 'Produce', amount: '$142.10', delta: '+12%' },
+      { name: 'Dairy', amount: '$88.40', delta: '−3%' },
+      { name: 'Pantry', amount: '$76.90', delta: '+4%' },
+      { name: 'Meat', amount: '$71.20', delta: '−9%' },
+      { name: 'Household', amount: '$58.30', delta: '+21%' },
+      { name: 'Bakery', amount: '$49.30', delta: '+2%' }
+    ];
+
+    const tab = on => ({ bd: on ? blue : 'transparent', fg: on ? blue : dim });
+    const trendTabs = [['spend','Spend'],['products','Products'],['prices','Prices']]
+      .map(([k, label]) => Object.assign({ label, go: () => this.setState({ trendsTab: k }) }, tab(s.trendsTab === k)));
+
+    const navItem = k => ({ fg: s.screen === k ? blue : dim, go: () => this.go(k) });
+    const toBuy = s.shopping.filter(i => !i.done).map(i => ({
+      name: i.name, meta: i.meta,
+      toggle: () => this.setState(st => ({ shopping: st.shopping.map(x => x.id === i.id ? Object.assign({}, x, { done: true }) : x) })),
+      del: () => this.setState(st => ({ shopping: st.shopping.filter(x => x.id !== i.id) }))
+    }));
+    const done = s.shopping.filter(i => i.done).map(i => ({
+      name: i.name,
+      toggle: () => this.setState(st => ({ shopping: st.shopping.map(x => x.id === i.id ? Object.assign({}, x, { done: false }) : x) }))
+    }));
+    const addNamed = name => this.setState(st => st.shopping.some(x => x.name === name)
+      ? { toast: name + ' is already on the list' }
+      : { shopping: st.shopping.concat([{ id: Date.now() + Math.random(), name, meta: '1 ea', done: false }]), toast: name + ' added' });
+
+    return {
+      rail, stateRail, stages, filters, ledger, rows, bars, cats, trendTabs, toBuy, done, categories,
+      themeClass: dark ? 'dark' : '', themeLabel: dark ? 'Light theme' : 'Dark theme',
+      toggleTheme: () => this.setState({ themeOverride: dark ? 'light' : 'dark' }),
+      networkLabel: s.offline ? 'Offline · queued' : '',
+      isHome: s.screen === 'home', isCapture: s.screen === 'capture', isProcessing: s.screen === 'processing',
+      isReview: s.screen === 'review', isLedger: s.screen === 'ledger', isDetail: s.screen === 'detail',
+      isShopping: s.screen === 'shopping', isTrends: s.screen === 'trends', isSettings: s.screen === 'settings',
+      showNav: ['home','ledger','shopping','trends','settings','detail'].indexOf(s.screen) >= 0,
+      navHome: navItem('home'), navLedger: navItem('ledger'), navShopping: navItem('shopping'), navTrends: navItem('trends'),
+      goHome: () => this.go('home'), goLedger: () => this.go('ledger'), goShopping: () => this.go('shopping'),
+      goDetail: () => this.go('detail'), goReview: () => this.go('review'), goSettings: () => this.go('settings'),
+      goPending: () => this.setState({ screen: 'ledger', ledgerFilter: 'review' }),
+      goCapture: () => this.setState({ screen: 'capture', camDenied: false }),
+      goGallery: () => { this.setState({ camDenied: false }); this.runProcessing(); },
+      grantCam: () => this.setState({ camDenied: false }),
+      startProcessing: () => this.runProcessing(),
+      shoot: () => { this.setState(st => ({ shots: st.shots + 1 })); this.runProcessing(); },
+      shotLabel: s.shots > 1 ? s.shots + ' shots' : 'Done',
+      camDenied: s.camDenied, camOk: !s.camDenied,
+      procRunning: s.procRunning && !s.procFailed, procFailed: s.procFailed,
+      toggleOffline: () => this.setState({ offline: !s.offline }),
+      hasPending: true,
+      recent: allLedger.slice(0, 4),
+      showItemsTab: s.reviewTab === 'items', showImageTab: s.reviewTab === 'image',
+      tabItems: () => this.setState({ reviewTab: 'items' }), tabImage: () => this.setState({ reviewTab: 'image' }),
+      tabItemsBd: s.reviewTab === 'items' ? blue : 'transparent', tabItemsFg: s.reviewTab === 'items' ? blue : dim,
+      tabImageBd: s.reviewTab === 'image' ? blue : 'transparent', tabImageFg: s.reviewTab === 'image' ? blue : dim,
+      itemCount: s.items.length,
+      hdr: s.hdr,
+      moreOpen: s.moreOpen, moreLabel: s.moreOpen ? 'Fewer fields' : 'More fields',
+      toggleMore: () => this.setState({ moreOpen: !s.moreOpen }),
+      setStore: e => this.setState({ hdr: Object.assign({}, s.hdr, { store: e.target.value }) }),
+      setDate: e => this.setState({ hdr: Object.assign({}, s.hdr, { date: e.target.value }) }),
+      setTxn: e => this.setState({ hdr: Object.assign({}, s.hdr, { txn: e.target.value }) }),
+      setSubtotal: e => this.setState({ hdr: Object.assign({}, s.hdr, { subtotal: e.target.value }) }),
+      setGst: e => this.setState({ hdr: Object.assign({}, s.hdr, { gst: e.target.value }) }),
+      setTotal: e => this.setState({ hdr: Object.assign({}, s.hdr, { total: e.target.value }) }),
+      toggleGroceries: () => this.setState({ groceries: !s.groceries }),
+      grocTrack: s.groceries ? blue : divider, grocKnob: s.groceries ? '16px' : '0px',
+      mismatch: !balanced, itemsTotal: money(itemsSum), receiptTotal: money(receiptTotal),
+      diffLabel: balanced ? 'Balanced' : 'Difference', diffValue: balanced ? '$0.00' : money(diff),
+      diffFg: balanced ? green : amber,
+      saveLabel: balanced ? 'Confirm into ledger' : 'Save anyway',
+      saveBg: balanced ? blue : 'transparent', saveFg: balanced ? onBlue : ink, saveBd: balanced ? blue : divider,
+      confirmReceipt: () => { this.flash(balanced ? 'Added to the ledger' : 'Saved with a ' + money(Math.abs(diff)) + ' difference'); this.go('ledger'); },
+      addRow: () => this.setState(st => ({ items: st.items.concat([{ id: Date.now(), name: 'New line', qty: '1', unit: 'ea', price: '0.00', line: '0.00', cat: 'Pantry' }]) })),
+      sheet: !!sheetItem,
+      sheetName: sheetItem ? sheetItem.name : '', sheetQty: sheetItem ? sheetItem.qty : '',
+      sheetUnit: sheetItem ? sheetItem.unit : '', sheetPrice: sheetItem ? sheetItem.price : '',
+      sheetLine: sheetItem ? sheetItem.line : '', sheetAttention: !!(sheetItem && sheetItem.attention && showConf),
+      sheetNote: sheetItem && sheetItem.attention ? sheetItem.attention : '',
+      setSheetName: e => this.patch(s.sheetId, 'name', e.target.value),
+      setSheetQty: e => this.patch(s.sheetId, 'qty', e.target.value),
+      setSheetUnit: e => this.patch(s.sheetId, 'unit', e.target.value),
+      setSheetPrice: e => this.patch(s.sheetId, 'price', e.target.value),
+      setSheetLine: e => this.patch(s.sheetId, 'line', e.target.value),
+      closeSheet: () => this.setState({ sheetId: null }),
+      deleteFromSheet: () => this.setState(st => ({ items: st.items.filter(x => x.id !== st.sheetId), sheetId: null })),
+      ledgerEmpty: ledger.length === 0, clearFilter: () => this.setState({ ledgerFilter: 'all' }),
+      detailItems: [
+        { name: 'Oat milk 1L', sub: '2 × $4.20 · Dairy', total: '$8.40' },
+        { name: 'Chicken thigh fillet', sub: '1.02 kg @ $13.00/kg · Meat', total: '$13.26' },
+        { name: 'Broccoli', sub: '0.48 kg @ $6.90/kg · Produce', total: '$3.31' },
+        { name: 'Penne 500g', sub: '3 × $2.40 · Pantry', total: '$7.20' },
+        { name: 'Greek yoghurt 1kg', sub: '1 × $7.50 · Dairy', total: '$7.50' },
+        { name: 'Laundry powder 2kg', sub: '1 × $14.90 · Household', total: '$14.90' }
+      ],
+      askDelete: () => this.setState({ confirmDelete: true }),
+      cancelDelete: () => this.setState({ confirmDelete: false }),
+      doDelete: () => { this.setState({ confirmDelete: false }); this.flash('Receipt deleted'); this.go('ledger'); },
+      confirmDelete: s.confirmDelete,
+      zoom: s.zoom, openZoom: () => this.setState({ zoom: true }), closeZoom: () => this.setState({ zoom: false }),
+      dupOpen: s.dupOpen, closeDup: () => this.setState({ dupOpen: false }),
+      doneCount: s.shopping.filter(i => i.done).length,
+      newItem: s.newItem, setNewItem: e => this.setState({ newItem: e.target.value }),
+      onNewItemKey: e => { if (e.key === 'Enter' && s.newItem.trim()) { addNamed(s.newItem.trim()); this.setState({ newItem: '' }); } },
+      addShopping: () => { if (s.newItem.trim()) { addNamed(s.newItem.trim()); this.setState({ newItem: '' }); } },
+      showSuggestions: P.suggestions !== false,
+      suggestions: [
+        { name: 'Olive oil 500ml', add: () => addNamed('Olive oil 500ml') },
+        { name: 'Rice 1kg', add: () => addNamed('Rice 1kg') },
+        { name: 'Dishwash liquid', add: () => addNamed('Dishwash liquid') }
+      ],
+      trendSpend: s.trendsTab === 'spend', trendProducts: s.trendsTab === 'products', trendPrices: s.trendsTab === 'prices',
+      freq: [
+        { name: 'Milk full cream 2L', rhythm: 'Every 5 days · $3.60', count: '9×' },
+        { name: 'Bananas Cavendish', rhythm: 'Every 6 days · $3.90/kg', count: '7×' },
+        { name: 'Sourdough loaf', rhythm: 'Weekly · $6.50', count: '6×' },
+        { name: 'Eggs free range 12pk', rhythm: 'Every 12 days · $8.20', count: '4×' },
+        { name: 'Tomatoes Roma', rhythm: 'Fortnightly · $5.90/kg', count: '3×' }
+      ],
+      prices: [
+        { name: 'Milk full cream 2L', from: '$3.20', to: '$3.60', delta: '+12.5%', fg: amber },
+        { name: 'Eggs free range 12pk', from: '$7.40', to: '$8.20', delta: '+10.8%', fg: amber },
+        { name: 'Bananas Cavendish', from: '$4.40', to: '$3.90', delta: '−11.4%', fg: green },
+        { name: 'Sourdough loaf', from: '$6.50', to: '$6.50', delta: 'steady', fg: dim }
+      ],
+      settings: [
+        { label: 'Members', value: 'Harleen, Ravi' },
+        { label: 'Currency and tax', value: 'AUD · GST 10%' },
+        { label: 'Processing', value: 'On device' },
+        { label: 'Categories', value: '6' },
+        { label: 'Keep receipt photos', value: 'Forever' },
+        { label: 'Larger text', value: 'System' }
+      ],
+      toast: s.toast
+    };
+  }
+}
+
+</script>
+</body>
+</html>

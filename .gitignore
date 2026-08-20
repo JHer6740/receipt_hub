@@ -1,0 +1,62 @@
+# Runtime and private data
+.env
+.env.*
+!.env.example
+**/instance/
+**/data/
+**/receipts/
+**/*.sqlite3
+**/*.sqlite3-*
+**/*.db
+**/private/
+**/uploads/
+**/managed/
+
+# Local test scratch. These hold copies of real receipt PDFs, so they must
+# never be committed — this repository is public.
+**/.pytest_tmp*/
+**/.pytest-codex-*/
+**/.acceptance-runtime/
+
+# Analysis outputs derived from real household receipts (purchase association
+# rules, forecasts, spend statistics). Regenerate locally with the scripts in
+# the backend root rather than publishing them.
+receipts - grocery home/analysis/
+
+# Parsed receipt exports: 752 real line items with prices and quantities.
+receipts - grocery home/parsed/
+
+# Receipt photographs kept at the backend root for detector tuning. These are
+# real receipts and include card transaction details (terminal ID, masked card
+# number, auth cryptogram).
+receipts - grocery home/*.jpg
+receipts - grocery home/*.jpeg
+receipts - grocery home/*.png
+
+# Machine-local agent settings
+.claude/settings.local.json
+.agents/
+.claude/
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+**/.mypy_cache/
+**/*.egg-info/
+
+# Flutter/Dart
+apps/receipts_hub/.dart_tool/
+apps/receipts_hub/build/
+apps/receipts_hub/.flutter-plugins
+apps/receipts_hub/.flutter-plugins-dependencies
+apps/receipts_hub/coverage/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/*.log

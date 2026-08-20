@@ -1,0 +1,97 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+.env
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+.tox/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.vim/
+
+# Documentation build
+docs/_build/
+site/
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+.~*
+
+# Data & Secrets (should not be in image)
+receipts/
+.local/
+*.db
+*.sqlite
+*.sqlite3
+secrets.env
+.env.local
+.env.*.local
+
+# Node (if any frontend is in same repo)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Docker
+.docker/
+.dockerignore
+Dockerfile*
+
+# Misc build artifacts
+*.o
+*.a
+*.so
+.c

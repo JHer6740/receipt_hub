@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Trends · Grocery Home{% endblock %}
+{% block content %}
+<header class="page-heading compact-heading trends-heading">
+  <div>
+    <p class="eyebrow">Household patterns</p>
+    <h1>How we shop.</h1>
+    <p>Costs, rhythms and recurring products drawn only from confirmed grocery receipts.</p>
+  </div>
+  <form class="period-picker" method="get" action="/trends">
+    <label for="range" class="sr-only">Trend period</label>
+    <select id="range" name="range">
+      {% for value, label in range_options %}
+      <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="button button-secondary" type="submit">Apply</button>
+  </form>
+</header>
+
+<section class="trend-hero">
+  <div>
+    <p class="metric-label">{{ trends.period_label }} spend</p>
+    <p class="hero-money">{{ trends.total_spend }}</p>
+    <p class="metric-comparison {% if trends.change_direction == 'down' %}is-good{% endif %}">{{ trends.change_label }}</p>
+  </div>
+  <dl>
+    <div><dt>Average trip</dt><dd>{{ trends.average_trip }}</dd></div>
+    <div><dt>Trips</dt><dd>{{ trends.trip_count }}</dd></div>
+    <div><dt>Items recorded</dt><dd>{{ trends.item_count }}</dd></div>
+    <div><dt>Savings recorded</dt><dd>{{ trends.savings }}</dd></div>
+  </dl>
+</section>
+
+<div class="chart-grid">
+  <section class="ledger-section chart-panel" aria-labelledby="spend-chart-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Paid at the checkout</p><h2 id="spend-chart-title">Spending over time</h2></div>
+    </div>
+    {% if spend_points %}
+    <div class="chart-wrap" data-spend-chart data-points='{{ spend_points_json|safe }}'>
+      <svg role="img" aria-labelledby="spend-chart-title spend-chart-desc"></svg>
+      <p id="spend-chart-desc" class="sr-only">A line chart of grocery spending over {{ trends.period_label|lower }}.</p>
+    </div>
+    <details class="accessible-data">
+      <summary>View chart as a table</summary>
+      <table><thead><tr><th scope="col">Period</th><th scope="col">Spend</th><th scope="col">Trips</th></tr></thead>
+        <tbody>{% for point in spend_points %}<tr><td>{{ point.label }}</td><td>{{ point.amount_label }}</td><td>{{ point.trips }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </details>
+    {% else %}
+    <div class="chart-empty"><p>Add confirmed grocery receipts to start a spending line.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="ledger-section chart-panel category-chart-panel" aria-labelledby="category-chart-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Share of grocery spend</p><h2 id="category-chart-title">Top categories</h2></div>
+    </div>
+    {% if category_points %}
+    <div class="chart-wrap" data-category-chart data-points='{{ category_points_json|safe }}'>
+      <svg role="img" aria-labelledby="category-chart-title category-chart-desc"></svg>
+      <p id="category-chart-desc" class="sr-only">Horizontal bars comparing grocery spend by category.</p>
+    </div>
+    <details class="accessible-data">
+      <summary>View chart as a table</summary>
+      <table><thead><tr><th scope="col">Category</th><th scope="col">Spend</th></tr></thead>
+        <tbody>{% for point in category_points %}<tr><td>{{ point.name }}</td><td>{{ point.amount_label }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </details>
+    {% else %}
+    <div class="chart-empty"><p>Categories appear after items have been confirmed.</p></div>
+    {% endif %}
+  </section>
+</div>
+
+<div class="insight-grid">
+  <section class="ledger-section recurring-panel" aria-labelledby="recurring-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Household staples</p><h2 id="recurring-title">Recurring products</h2></div>
+    </div>
+    {% if recurring_products %}
+    <div class="ranked-list">
+      {% for product in recurring_products %}
+      <div>
+        <span>{{ "%02d"|format(loop.index) }}</span>
+        <div><strong>{{ product.description }}</strong><small>{{ product.purchase_label }} · {{ product.cadence_label }}</small></div>
+        <strong>{{ product.typical_price }}</strong>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="quiet-copy">Recurring products need at least two purchase dates.</p>{% endif %}
+  </section>
+
+  <section class="ledger-section price-panel" aria-labelledby="prices-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Latest weekly check</p><h2 id="prices-title">Woolworths prices</h2></div>
+      <form method="post" action="/settings/prices/refresh">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="text-button" type="submit">Refresh</button>
+      </form>
+    </div>
+    {% if price_quotes %}
+    <div class="price-list">
+      {% for quote in price_quotes %}
+      <a href="{{ quote.url }}" target="_blank" rel="noopener">
+        <div><strong>{{ quote.description }}</strong><span>{{ quote.fetched_label }}{% if quote.is_stale %} · last known{% endif %}</span></div>
+        <span><strong>{{ quote.price }}</strong><small class="{% if quote.delta_direction == 'up' %}price-up{% else %}price-down{% endif %}">{{ quote.delta_label }}</small></span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}<p class="quiet-copy">The weekly check will follow products that are active or on the shopping list.</p>{% endif %}
+    <p class="small-print">Product descriptions are sent to Woolworths. Receipt images never are.</p>
+  </section>
+</div>
+
+<section class="ledger-section advanced-panel" aria-labelledby="advanced-title">
+  <div class="section-heading">
+    <div><p class="eyebrow">Deeper patterns</p><h2 id="advanced-title">Often bought together</h2></div>
+    <span class="status-badge status-{{ advanced.status_tone }}">{{ advanced.status_label }}</span>
+  </div>
+  {% if advanced.available and associations %}
+  <div class="association-list">
+    {% for rule in associations %}
+    <div><span>{{ rule.left }}</span><svg aria-hidden="true" viewBox="0 0 32 12"><path d="M1 6h27M23 1l5 5-5 5"/></svg><span>{{ rule.right }}</span><small>{{ rule.confidence_label }} confidence</small></div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="quiet-copy">{{ advanced.message }}</p>
+  {% endif %}
+</section>
+{% endblock %}

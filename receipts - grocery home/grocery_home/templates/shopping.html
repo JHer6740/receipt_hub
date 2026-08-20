@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Shopping · Grocery Home{% endblock %}
+{% block content %}
+<header class="page-heading compact-heading shopping-heading">
+  <div>
+    <p class="eyebrow">Shared household list</p>
+    <h1>What we need.</h1>
+    <p>Tick things off in the aisle. Everyone on the home network sees the same list.</p>
+  </div>
+  <span class="list-count">{{ active_items|length }} to buy</span>
+</header>
+
+<form class="quick-add" method="post" action="/shopping">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>
+    <span class="sr-only">Item to add</span>
+    <input name="description" placeholder="Add milk, bananas, dish soap…" maxlength="160" required>
+  </label>
+  <label class="quick-quantity">
+    <span class="sr-only">Quantity</span>
+    <input name="quantity" inputmode="decimal" value="1" aria-label="Quantity">
+  </label>
+  <button class="button button-primary" type="submit">Add to list</button>
+</form>
+
+<div class="shopping-layout">
+  <section class="shopping-list-section" aria-labelledby="active-list-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Take this to the shops</p><h2 id="active-list-title">Household list</h2></div>
+    </div>
+    {% if active_items %}
+    <div class="checklist">
+      {% for item in active_items %}
+      <div class="checklist-row">
+        <form method="post" action="/shopping/{{ item.id }}/toggle">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="check-button" type="submit" aria-label="Mark {{ item.description }} as bought"><span></span></button>
+        </form>
+        <div>
+          <strong>{{ item.description }}</strong>
+          <span>{{ item.quantity_label }}{% if item.note %} · {{ item.note }}{% endif %}</span>
+        </div>
+        {% if item.source == 'prediction' %}<span class="source-mark">Suggested</span>{% endif %}
+        <form method="post" action="/shopping/{{ item.id }}/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="icon-button" type="submit" aria-label="Remove {{ item.description }}">×</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-ledger">
+      <svg aria-hidden="true" viewBox="0 0 80 64"><path d="M17 15h46l-4 40H21z"/><path d="M29 21v-5a11 11 0 0 1 22 0v5"/><path class="accent" d="m29 37 7 7 15-17"/></svg>
+      <h3>The list is clear</h3>
+      <p>Add something above, or pull a recurring staple in from the suggestions.</p>
+    </div>
+    {% endif %}
+
+    {% if completed_items %}
+    <details class="completed-list">
+      <summary>{{ completed_items|length }} recently bought</summary>
+      <div>
+        {% for item in completed_items %}
+        <form class="completed-row" method="post" action="/shopping/{{ item.id }}/toggle">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">
+            <span class="completed-check" aria-hidden="true">
+              <svg viewBox="0 0 20 20"><path d="m4 10 4 4 8-9"/></svg>
+            </span>
+            <s>{{ item.description }}</s><small>{{ item.completed_label }}</small>
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </section>
+
+  <aside class="suggestion-inbox" aria-labelledby="suggestions-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Based on past shops</p><h2 id="suggestions-title">Suggestions</h2></div>
+    </div>
+    {% if suggestions %}
+    <div class="suggestion-stack">
+      {% for item in suggestions %}
+      <article>
+        <div>
+          <span class="confidence-dot confidence-{{ item.confidence }}" aria-hidden="true"></span>
+          <small>{{ item.due_label }}</small>
+        </div>
+        <h3>{{ item.description }}</h3>
+        <p>Usually every {{ item.interval_label }} · about {{ item.estimated_cost }}</p>
+        <div>
+          <form method="post" action="/shopping/suggestions/{{ item.key }}/dismiss">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="text-button" type="submit">Not now</button>
+          </form>
+          <form method="post" action="/shopping/suggestions/{{ item.key }}/add">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="compact-button" type="submit">Add</button>
+          </form>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="quiet-copy">No new suggestions today. They appear when an item is approaching its usual buying date.</p>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

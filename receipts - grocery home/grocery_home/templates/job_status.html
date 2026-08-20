@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Reading receipt · Grocery Home{% endblock %}
+{% block content %}
+<section class="job-page" data-job-id="{{ job.id }}" data-job-url="/api/jobs/{{ job.id }}"
+         aria-labelledby="job-heading" aria-describedby="job-message" aria-busy="true">
+  <div class="receipt-scanner" aria-hidden="true">
+    <div class="scanner-paper">
+      <span></span><span></span><span></span><span></span><span></span>
+      <i></i>
+    </div>
+  </div>
+  <p class="eyebrow">Household inbox</p>
+  <h1 id="job-heading" data-job-heading>{{ job.heading }}</h1>
+  <p id="job-message" class="job-message" data-job-message role="status" aria-live="polite">{{ job.message }}</p>
+  <div class="job-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+       aria-valuenow="{{ job.progress }}" aria-label="Receipt processing progress">
+    <span data-job-progress style="width: {{ job.progress }}%"></span>
+  </div>
+  <p class="small-print">It is safe to leave this page. Processing continues on the home computer.</p>
+  <div class="job-actions">
+    <a class="button button-secondary" href="/">Return home</a>
+    <a class="button button-primary is-hidden" data-job-destination href="#">Review receipt</a>
+  </div>
+</section>
+{% endblock %}

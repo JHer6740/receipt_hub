@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Unlock Grocery Home{% endblock %}
+{% block guest_content %}
+<section class="login-layout">
+  <div class="login-brand" aria-hidden="true">
+    <div class="receipt-ribbon">
+      <span>WEEKLY SHOP</span>
+      <strong>Grocery<br>Home</strong>
+      <div class="ribbon-lines"><i></i><i></i><i></i><i></i></div>
+      <small>Receipts · needs · costs</small>
+    </div>
+  </div>
+  <div class="login-panel">
+    <div class="login-copy">
+      <p class="eyebrow">Private household ledger</p>
+      <h1>Come on in.</h1>
+      <p>Use the household PIN to see your receipts, shopping list and grocery patterns.</p>
+    </div>
+
+    {% if error %}
+    <div id="login-error" class="field-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/login" class="login-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="pin">Household PIN</label>
+      <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password"
+             minlength="4" maxlength="64" required autofocus
+             {% if error %}aria-invalid="true" aria-describedby="login-error"{% endif %}>
+      <button class="button button-primary" type="submit">Unlock Grocery Home</button>
+    </form>
+    <p class="privacy-note">
+      Served from your home computer. People on this network still need the PIN.
+    </p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grocery-home"
+version = "0.1.0"
+description = "A private, mobile-friendly household grocery receipt and shopping app."
+requires-python = ">=3.12"
+dependencies = [
+  "argon2-cffi>=23.1",
+  "fastapi>=0.115",
+  "itsdangerous>=2.2",
+  "jinja2>=3.1",
+  "pillow>=10.4,<11",
+  "pypdf>=6.9",
+  "python-multipart>=0.0.20",
+  "requests>=2.32",
+  "sqlalchemy>=2.0",
+  "tzdata>=2025.2",
+  "uvicorn[standard]>=0.34",
+]
+
+[project.optional-dependencies]
+ocr = [
+  "onnxruntime>=1.20",
+  "pillow-heif>=0.20,<1.1",
+  "pypdfium2>=4.30",
+  "rapidocr>=3.4",
+]
+dev = [
+  "beautifulsoup4>=4.13",
+  "httpx>=0.28",
+  "playwright>=1.50",
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+]
+
+[project.scripts]
+grocery-home = "grocery_home.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["grocery_home*"]
+
+[tool.setuptools.package-data]
+grocery_home = [
+  "templates/*.html",
+  "static/*.css",
+  "static/*.js",
+  "static/*.svg",
+  "static/fonts/*",
+  "*.onnx",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["."]
