@@ -89,16 +89,39 @@ below.
 - [ ] **Flaky backend tests under load.** `test_a_tampered_token_is_rejected` and `test_api_pin_auth_issues_and_validates_signed_session` failed intermittently while a Gradle build and an emulator were competing for the machine, then passed on three consecutive clean full runs. Both are timing-sensitive around the PIN throttle. Not reproduced in isolation; worth pinning down rather than assuming it is only load.
 - [ ] **Emulator package service is wedged.** `adb shell pm ...` returns `Broken pipe` on `emulator-5554` after it ran out of storage. Sections B and C have therefore never been seen running on a device. Cold boot or wipe the AVD (`flutter emulators --launch Medium_Phone_API_36.1`, then Wipe Data from the AVD manager) before the next device check.
 
-## NEXT SESSION — section D: commercial release
+## Section D — commercial release — 21 August 2026
 
-- [ ] Remove `android:usesCleartextTraffic="true"` from the manifest; HTTPS only.
-- [ ] Real release signing — `android/app/build.gradle.kts` still uses `signingConfigs.getByName("debug")`. **Needs you:** you must own the keystore, and its passwords must not enter this public repo. Wire Gradle to read `key.properties`/env and keep it ignored.
-- [ ] `https://` App Links, so email verification and password-reset links open the app. **Needs you:** a domain and a hosted `assetlinks.json`.
-- [ ] Account deletion and data export (both absent; `grep -r "export\|csv\|Share" lib/` returns nothing). Depends on the section C endpoints.
-- [ ] Privacy policy and terms links. **Needs you:** legal review — not text to invent.
-- [ ] Crash and error reporting. **Needs you:** a provider account/DSN.
-- [ ] Rate limiting and abuse protection on the new auth routes.
-- [ ] Decide the launch market: currency is hard-locked to `en_AU` (`app_components.dart`, `prefixText: r'$ '` in three places) and every `DateFormat` call omits a locale, so dates render `en_US` regardless of device. Fine for an AU-only launch — state it rather than discover it.
+Deployment target decided: the existing Raspberry Pi, over HTTPS through
+Cloudflare on a subdomain of `aacu-church.org`. Written up in
+[deployment](docs/deployment.md).
+
+- [x] **HTTPS only.** `usesCleartextTraffic="true"` is gone, replaced by `network_security_config.xml` that refuses cleartext. A **debug-only** override allows plain HTTP to `10.0.2.2`, `localhost` and `127.0.0.1` so the developer host screen can still reach a local backend — and nothing else, so a debug build cannot accidentally talk to a real service in the clear.
+- [x] **Release signing wired.** `android/app/build.gradle.kts` reads `android/key.properties` (git-ignored, with `.example` committed). Without it a release build logs a warning and falls back to debug keys rather than silently producing something that looks shippable. Release builds also minify and shrink now, with `proguard-rules.pro` keeping Flutter's reflective entry points.
+- [x] **App Links.** `autoVerify` intent-filter on `https://${appLinkHost}/app`, host injected from `key.properties`. Defaults to `receipts.aacu-church.org`.
+- [x] **Account deletion.** `DELETE /api/v1/auth/account` plus a two-step UI: the first step explains that household receipts survive (they belong to the household, not the person), the second requires typing DELETE, so an irreversible action cannot be tapped through. Tested.
+- [x] **Data export.** `GET /api/v1/households/{id}/export` returns CSV — one row per line item with its receipt — handed to the OS share sheet. Scoped: another household's export is a 404. Being able to delete an account without being able to take the data out first would not be acceptable.
+- [x] **Privacy, terms and support links** in Account, from `--dart-define`. Hidden entirely until the URLs are set, because a dead privacy link is worse than none.
+- [x] **Error reporting seam.** `lib/core/data/error_reporter.dart` installs on both `FlutterError.onError` and `PlatformDispatcher.onError` — both are needed, or an unawaited future's failure vanishes. Keeps the last 20 errors. No vendor SDK: `report` is the single function a provider plugs into.
+- [x] **Auth routes are throttled.** `register`, `login` and `reset-password` were unlimited; only `/auth/pin` was protected. Counters are scoped per route so failed sign-ins do not lock someone out of signing up. Tested to 429.
+- [x] Verified: **89 backend tests pass** (was 87), **53 Flutter tests pass** (was 51), `flutter analyze` clean, release APK builds with minification.
+
+### Still needs you
+
+Named because none of it is code I can write:
+
+- [ ] **Create and back up a release keystore**, then fill in `android/key.properties`. Losing that key means never being able to update the Play listing. Until it exists, release builds are debug-signed and App Links cannot verify.
+- [ ] **Publish `/.well-known/assetlinks.json`** on the subdomain with the release certificate's SHA-256 fingerprint. Command and JSON are in [deployment](docs/deployment.md) §5.
+- [ ] **Privacy policy and terms**, then pass their URLs at build time. Needs your review, not text I invent.
+- [ ] **A crash-reporting account/DSN**, then wire it into `ErrorReporter`.
+- [ ] **An email provider**, then finish password-reset delivery and add email verification (deliberately unimplemented — without delivery nobody could get a token).
+
+### Still open, and mine to do
+
+- [ ] **Comparison evidence** — the last feature gap. Schema plus `/rivals`, `/items/{key}`, `/shopping/quotes`; Rivals and Item currently show the honest "not enough prices yet" panel.
+- [ ] **Measure OCR on the Pi.** ONNX Runtime / RapidOCR on ARM will be much slower than on this machine, and the capture flow polls with a three-minute budget. Time a real receipt end to end before assuming it feels acceptable.
+- [ ] **Postgres and object storage.** SQLite is one writer, and receipt images sit on the Pi's filesystem — a durability concern more than an access one. Revisit when it hurts.
+- [ ] **Ownership transfer.** An owner cannot be removed and ownership cannot be handed over, so a household whose owner leaves cannot be re-administered.
+- [ ] **Launch market.** Currency is hard-locked to `en_AU` and `DateFormat` calls omit a locale, so dates render `en_US` regardless of device. Fine for an AU-only launch — decide and state it rather than discover it.
 
 ## NEXT SESSION — open decisions
 
