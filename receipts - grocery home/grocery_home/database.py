@@ -16,7 +16,7 @@ from sqlalchemy.pool import StaticPool
 from .config import Settings, get_settings
 
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 
 class Base(DeclarativeBase):
@@ -134,8 +134,9 @@ def create_database(
 def initialize_schema(database: Database) -> int:
     """Create the schema and apply registered forward migrations atomically."""
 
-    # Importing registers every model on Base.metadata while avoiding a circular
-    # import at module load time.
+    # Importing registers every model on Base.metadata, and every migration
+    # on the registry, while avoiding a circular import at module load time.
+    from . import migrations as _migrations  # noqa: F401
     from .models import SchemaMigration
 
     Base.metadata.create_all(database.engine)
@@ -175,7 +176,26 @@ def initialize_schema(database: Database) -> int:
             )
         current_version = target_version
 
+    _ensure_default_household(database)
     return current_version
+
+
+def _ensure_default_household(database: Database) -> None:
+    """Guarantee household 1 exists.
+
+    Every household-owned table defaults `household_id` to 1, so that row has
+    to be there for the foreign key to hold. It is the household the
+    single-household build wrote into, and after migration it is an ordinary
+    household like any other.
+    """
+
+    from .models import Household
+
+    with database.session() as session:
+        if session.get(Household, 1) is not None:
+            return
+        session.add(Household(id=1, display_name="Our household"))
+        session.commit()
 
 
 def schema_version(database: Database) -> int:

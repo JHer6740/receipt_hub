@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Any
 
 from sqlalchemy import (
+    Enum as SAEnum,
     JSON,
     Boolean,
     CheckConstraint,
@@ -162,19 +163,118 @@ class AppSetting(Base):
     )
 
 
+class MembershipRole(str, Enum):
+    """What someone may do inside a household."""
+
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
+    VIEWER = "viewer"
+
+
+class MembershipStatus(str, Enum):
+    """Where someone stands with a household.
+
+    A join request is a prospective membership rather than a separate record.
+    One table means one place decides access, so a request and a membership can
+    never disagree about whether someone is in.
+    """
+
+    PENDING = "pending"
+    ACTIVE = "active"
+    DECLINED = "declined"
+
+
+class User(TimestampMixin, Base):
+    """A person with an account.
+
+    Accounts are personal and households are shared; the two are joined by
+    :class:`HouseholdMembership`.
+    """
+
+    __tablename__ = "users"
+    __table_args__ = (Index("uq_users_email", "email", unique=True),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        UTCDateTime(),
+        nullable=True,
+    )
+    # Bumped to revoke every token this account holds, the same way a PIN
+    # rotation revokes household tokens.
+    session_generation: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+    )
+
+
+class HouseholdMembership(TimestampMixin, Base):
+    """One person's standing in one household."""
+
+    __tablename__ = "household_memberships"
+    __table_args__ = (
+        Index(
+            "uq_household_memberships_pair",
+            "household_id",
+            "user_id",
+            unique=True,
+        ),
+        Index("ix_household_memberships_user", "user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    role: Mapped[MembershipRole] = mapped_column(
+        SAEnum(MembershipRole, native_enum=False, length=16),
+        nullable=False,
+        default=MembershipRole.MEMBER,
+    )
+    status: Mapped[MembershipStatus] = mapped_column(
+        SAEnum(MembershipStatus, native_enum=False, length=16),
+        nullable=False,
+        default=MembershipStatus.PENDING,
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(
+        UTCDateTime(),
+        nullable=True,
+    )
+
+
 class Household(TimestampMixin, Base):
-    """The single household identity used by the v1 shared-PIN experience."""
+    """One household ledger.
+
+    Was constrained to a single row (`id = 1`) for the shared-PIN build. That
+    constraint is gone: a hosted product has many households, and receipts are
+    scoped to whichever one they were filed into.
+    """
 
     __tablename__ = "households"
-    __table_args__ = (CheckConstraint("id = 1", name="ck_households_singleton"),)
+    __table_args__ = (
+        Index("uq_households_join_code", "join_code", unique=True),
+    )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     display_name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
         default="Our household",
     )
-    pin_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # A short, non-secret code someone can be given so they can request access.
+    # It is an identifier, never authentication.
+    join_code: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Only the legacy shared-PIN household has one.
+    pin_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     session_generation: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -219,6 +319,11 @@ class UploadBatch(TimestampMixin, Base):
     )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+        default=1,
+    )
     status: Mapped[ProcessingStatus] = mapped_column(
         _enum_type(ProcessingStatus, "processing_status"),
         nullable=False,
@@ -310,6 +415,11 @@ class Receipt(TimestampMixin, Base):
     )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+        default=1,
+    )
     upload_file_id: Mapped[str | None] = mapped_column(
         ForeignKey("upload_files.id", ondelete="SET NULL"),
         unique=True,
@@ -431,6 +541,11 @@ class ShoppingItem(TimestampMixin, Base):
     )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+        default=1,
+    )
     product_key: Mapped[str | None] = mapped_column(String(120), nullable=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(
@@ -471,6 +586,11 @@ class AnalyticsSnapshot(Base):
     )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+        default=1,
+    )
     generated_at: Mapped[datetime] = mapped_column(
         UTCDateTime(),
         nullable=False,
@@ -628,6 +748,10 @@ def make_receipt_natural_key(
 
 __all__ = [
     "AnalyticsSnapshot",
+    "HouseholdMembership",
+    "MembershipRole",
+    "MembershipStatus",
+    "User",
     "AppSetting",
     "BackgroundJob",
     "Household",

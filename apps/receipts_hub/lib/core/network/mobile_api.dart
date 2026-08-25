@@ -250,11 +250,40 @@ class MobileApi {
   }
 
   /// Start a new household. The creator owns it.
+  ///
+  /// The service hands back a session scoped to the new household, which this
+  /// adopts: household reads are authorised by the token, so without it the
+  /// household would exist but not be readable.
   Future<HouseholdSummary> createHousehold(String name) async {
     final data = await _post('/api/v1/households', <String, dynamic>{
       'name': name,
     });
+    final session = data['session'];
+    if (session is Map<String, dynamic>) {
+      await _adoptToken(session['token'] as String?);
+    }
     return HouseholdSummary.fromJson(data);
+  }
+
+  /// Scope this session to one household.
+  ///
+  /// Household-scoped reads are authorised by a token that names the
+  /// household, so switching household means taking a new token rather than
+  /// sending an id the service would have to trust.
+  Future<SessionEnvelope> selectHousehold(String householdId) async {
+    final data = await _post(
+      '/api/v1/households/${Uri.encodeComponent(householdId)}/select',
+      const <String, dynamic>{},
+    );
+    final session = SessionEnvelope.fromJson(data);
+    await _adoptToken(session.token);
+    return session;
+  }
+
+  Future<void> _adoptToken(String? token) async {
+    if (token == null || token.isEmpty) return;
+    _token = token;
+    await _secureStorage.write(key: _tokenKey, value: token);
   }
 
   /// Ask to join an existing household by its ID or join code.

@@ -88,7 +88,7 @@ def test_schema_initialization_is_idempotent_and_enables_foreign_keys() -> None:
                 )
             )
             foreign_keys = session.execute(text("PRAGMA foreign_keys")).scalar_one()
-        assert migration_count == 1
+        assert migration_count == CURRENT_SCHEMA_VERSION
         assert foreign_keys == 1
     finally:
         database.dispose()

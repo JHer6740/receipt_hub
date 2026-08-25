@@ -84,6 +84,39 @@ class PinAuthRequest(BaseModel):
     pin: str = Field(..., min_length=4, max_length=64, description="Household PIN")
 
 
+class RegisterRequest(BaseModel):
+    """Request body for POST /api/v1/auth/register."""
+
+    email: str = Field(..., max_length=320, description="Email address")
+    # Length is enforced in `accounts.validate_password` so the response
+    # names what to do instead of returning a bare 422.
+    password: str = Field(..., max_length=200)
+    display_name: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Shown to others in the household",
+    )
+
+
+class LoginRequest(BaseModel):
+    """Request body for POST /api/v1/auth/login."""
+
+    email: str = Field(..., max_length=320)
+    password: str = Field(..., max_length=200)
+
+
+class PasswordResetRequest(BaseModel):
+    """Request body for POST /api/v1/auth/reset-password."""
+
+    email: str = Field(..., max_length=320)
+
+
+class CreateHouseholdRequest(BaseModel):
+    """Request body for POST /api/v1/households."""
+
+    name: str = Field(..., min_length=1, max_length=100)
+
+
 class SessionTokenData(BaseModel):
     """Successful authentication response."""
     session_token: str = Field(..., description="Bearer token for API requests")

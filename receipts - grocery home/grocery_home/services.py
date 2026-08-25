@@ -27,6 +27,7 @@ from .jobs import enqueue_job
 from .models import (
     AnalyticsSnapshot,
     BackgroundJob,
+    Household,
     JobStatus,
     ProcessingStatus,
     Receipt,
@@ -270,12 +271,18 @@ def due_suggestions(
     payload: Mapping[str, Any],
     *,
     limit: int | None = None,
+    household_id: int | None = None,
 ) -> list[dict[str, Any]]:
     """Return due-soon suggestions minus anything already listed or dismissed."""
 
     now = utc_now()
     blocked_keys: set[str] = set()
-    for item in session.scalars(select(ShoppingItem)).all():
+    blocking_query = select(ShoppingItem)
+    if household_id is not None:
+        blocking_query = blocking_query.where(
+            ShoppingItem.household_id == household_id
+        )
+    for item in session.scalars(blocking_query).all():
         if item.status == ShoppingStatus.ACTIVE:
             blocked_keys.add(item.product_key or product_identity(None, item.description))
         elif (
@@ -508,6 +515,21 @@ def receipt_view(receipt: Receipt) -> dict[str, Any]:
     }
 
 
+def pin_configured_household(session: Session, household_id: int = 1) -> Household | None:
+    """The shared-PIN household, or None when setup has not been run.
+
+    Household 1 now always exists: every household-owned table defaults its
+    `household_id` to it, so the foreign key needs that row. Existence is
+    therefore no longer evidence that anyone has set a PIN, which is what the
+    login and PIN-auth paths actually need to know.
+    """
+
+    household = session.get(Household, household_id)
+    if household is None or not household.pin_hash:
+        return None
+    return household
+
+
 def receipt_collection(receipt: Receipt) -> tuple[str | None, str | None]:
     """Which collection a receipt belongs to.
 
@@ -531,14 +553,25 @@ def receipt_collection(receipt: Receipt) -> tuple[str | None, str | None]:
     return normalize_collection_id(name), name
 
 
-def delete_receipt(session: Session, receipt_id: str) -> None:
+def delete_receipt(
+    session: Session,
+    receipt_id: str,
+    *,
+    household_id: int | None = None,
+) -> None:
     """Remove a receipt and its line items.
 
     The client offered a delete action long before this existed, so a deleted
-    receipt reappeared on the next refresh.
+    receipt reappeared on the next refresh. Scoped, so one household cannot
+    delete another's receipt by guessing an id.
     """
 
-    receipt = load_receipt(session, receipt_id, with_items=False)
+    receipt = load_receipt(
+        session,
+        receipt_id,
+        with_items=False,
+        household_id=household_id,
+    )
     session.delete(receipt)
     session.flush()
 
@@ -622,10 +655,23 @@ def receipt_balance(receipt: Receipt) -> dict[str, Any]:
     }
 
 
-def load_receipt(session: Session, receipt_id: str, *, with_items: bool = True) -> Receipt:
-    """Fetch a receipt with its items and upload file, or raise ``NotFoundError``."""
+def load_receipt(
+    session: Session,
+    receipt_id: str,
+    *,
+    with_items: bool = True,
+    household_id: int | None = None,
+) -> Receipt:
+    """Fetch a receipt with its items and upload file, or raise ``NotFoundError``.
+
+    When `household_id` is given, a receipt belonging to a different household
+    is reported as *not found* rather than *forbidden*, so the API never
+    confirms that someone else's receipt id exists.
+    """
 
     query = select(Receipt).where(Receipt.id == receipt_id)
+    if household_id is not None:
+        query = query.where(Receipt.household_id == household_id)
     if with_items:
         query = query.options(
             selectinload(Receipt.items), selectinload(Receipt.upload_file)
@@ -656,14 +702,18 @@ def resolve_receipt_items(session: Session, receipt: Receipt) -> Sequence[Receip
 # ---------------------------------------------------------------------------
 
 
-def job_payload(session: Session, batch_id: str) -> dict[str, Any] | None:
+def job_payload(
+    session: Session,
+    batch_id: str,
+    *,
+    household_id: int | None = None,
+) -> dict[str, Any] | None:
     """Describe an upload batch's processing stage for polling clients."""
 
-    batch = session.scalar(
-        select(UploadBatch)
-        .where(UploadBatch.id == batch_id)
-        .options(selectinload(UploadBatch.files))
-    )
+    query = select(UploadBatch).where(UploadBatch.id == batch_id)
+    if household_id is not None:
+        query = query.where(UploadBatch.household_id == household_id)
+    batch = session.scalar(query.options(selectinload(UploadBatch.files)))
     if batch is None:
         return None
     receipt = session.scalar(
@@ -1127,6 +1177,7 @@ def dismiss_suggestion(session: Session, key: str) -> ShoppingItem:
 __all__ = [
     "COLLECTION_ICONS",
     "receipt_collection",
+    "pin_configured_household",
     "delete_receipt",
     "REVIEWABLE_STATUSES",
     "TERMINAL_UPLOAD_STATUSES",

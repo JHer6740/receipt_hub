@@ -34,6 +34,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.orm import Session, selectinload
 
+from . import accounts
 from . import api_schemas as schemas
 from . import services
 from .config import Settings, get_settings
@@ -45,6 +46,7 @@ from .ingestion import (
 )
 from .jobs import enqueue_job
 from .models import (
+    User,
     Household,
     ProcessingStatus,
     Receipt,
@@ -53,6 +55,7 @@ from .models import (
     utc_now,
 )
 from .security import (
+    SessionData,
     InvalidSessionError,
     PinThrottle,
     SessionManager,
@@ -209,6 +212,11 @@ def authenticate_api_request(
             trace_id=trace,
         ) from exc
 
+    # An account session names a person; a shared-PIN session names only the
+    # legacy household.
+    if data.is_account_session:
+        return _resolve_account_session(session, data, trace)
+
     household = session.get(Household, data.household_id)
     if household is None or not session_matches_household(data, household):
         raise api_error(
@@ -220,10 +228,582 @@ def authenticate_api_request(
     return household, trace
 
 
+def _resolve_account_session(
+    session: Session,
+    data: SessionData,
+    trace: str,
+) -> tuple[Household, str]:
+    """Resolve an account session to the household it may read.
+
+    Membership is checked here, on every request, rather than trusted from the
+    token. A token that was valid when issued must stop working the moment the
+    membership behind it is revoked.
+    """
+
+    user = session.get(User, data.user_id)
+    if user is None or user.session_generation != data.generation:
+        raise api_error(
+            status.HTTP_401_UNAUTHORIZED,
+            "INVALID_TOKEN",
+            "This session has expired or is not valid. Sign in again.",
+            trace_id=trace,
+        )
+
+    if data.scoped_household_id is None:
+        raise api_error(
+            status.HTTP_409_CONFLICT,
+            "NO_HOUSEHOLD_SELECTED",
+            "Choose a household before opening your receipts.",
+            trace_id=trace,
+        )
+
+    try:
+        accounts.membership_for(
+            session,
+            user=user,
+            household_id=data.scoped_household_id,
+        )
+    except accounts.AccountError as exc:
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            exc.code,
+            exc.message,
+            trace_id=trace,
+        ) from exc
+
+    household = session.get(Household, data.scoped_household_id)
+    if household is None:
+        raise api_error(
+            status.HTTP_404_NOT_FOUND,
+            "HOUSEHOLD_NOT_FOUND",
+            "That household is no longer available.",
+            trace_id=trace,
+        )
+    return household, trace
+
+
+def authenticate_account(
+    request: Request,
+    session: Session = Depends(get_db),
+    token: str = Depends(get_bearer_token),
+) -> tuple[User, SessionData, str]:
+    """Resolve a bearer token to an account, without needing a household.
+
+    Used by the account and household routes: picking a household cannot
+    itself require one.
+    """
+
+    trace = trace_id_for(request)
+    manager: SessionManager | None = getattr(request.app.state, "session_manager", None)
+    if manager is None:
+        raise api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "NOT_CONFIGURED",
+            "This Receipts Hub is still starting up. Try again shortly.",
+            trace_id=trace,
+        )
+    try:
+        data = manager.load(token)
+    except InvalidSessionError as exc:
+        raise api_error(
+            status.HTTP_401_UNAUTHORIZED,
+            "INVALID_TOKEN",
+            "This session has expired or is not valid. Sign in again.",
+            trace_id=trace,
+        ) from exc
+
+    if not data.is_account_session:
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            "ACCOUNT_REQUIRED",
+            "This action needs a personal account.",
+            trace_id=trace,
+        )
+    user = session.get(User, data.user_id)
+    if user is None or user.session_generation != data.generation:
+        raise api_error(
+            status.HTTP_401_UNAUTHORIZED,
+            "INVALID_TOKEN",
+            "This session has expired or is not valid. Sign in again.",
+            trace_id=trace,
+        )
+    return user, data, trace
+
+
 AuthenticatedHousehold = Annotated[
     tuple[Household, str], Depends(authenticate_api_request)
 ]
+AuthenticatedAccount = Annotated[
+    tuple[User, SessionData, str], Depends(authenticate_account)
+]
 DbSession = Annotated[Session, Depends(get_db)]
+
+
+def _account_error(exc: "accounts.AccountError", trace: str) -> HTTPException:
+    return api_error(exc.status_code, exc.code, exc.message, trace_id=trace)
+
+
+def _session_manager(request: Request, trace: str) -> SessionManager:
+    manager: SessionManager | None = getattr(request.app.state, "session_manager", None)
+    if manager is None:
+        raise api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "NOT_CONFIGURED",
+            "This Receipts Hub is still starting up. Try again shortly.",
+            trace_id=trace,
+        )
+    return manager
+
+
+def _session_payload(
+    manager: SessionManager,
+    user: User,
+    *,
+    household_id: int | None,
+    household_name: str,
+) -> dict[str, Any]:
+    issued = manager.issue_for_user(
+        user.id,
+        user.session_generation,
+        household_id=household_id,
+    )
+    return {
+        "token": issued.token,
+        "expires_at": (
+            datetime.now(UTC) + timedelta(seconds=manager.max_age_seconds)
+        ).isoformat(),
+        "household_name": household_name,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "display_name": user.display_name,
+            "email_verified": user.email_verified_at is not None,
+        },
+    }
+
+
+# ============================================================================
+# Accounts
+# ============================================================================
+
+
+@router.post("/auth/register", status_code=status.HTTP_201_CREATED)
+def register_account(
+    request: Request,
+    body: schemas.RegisterRequest,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Create an account and return a session for it."""
+
+    trace = trace_id_for(request)
+    manager = _session_manager(request, trace)
+    try:
+        user = accounts.register_user(
+            session,
+            email=body.email,
+            password=body.password,
+            display_name=body.display_name,
+        )
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    session.commit()
+    return api_response(
+        data=_session_payload(
+            manager,
+            user,
+            household_id=None,
+            household_name=user.display_name,
+        ),
+        trace_id=trace,
+    )
+
+
+@router.post("/auth/login")
+def log_in(
+    request: Request,
+    body: schemas.LoginRequest,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Exchange an email and password for a session."""
+
+    trace = trace_id_for(request)
+    manager = _session_manager(request, trace)
+    try:
+        user = accounts.authenticate_user(
+            session,
+            email=body.email,
+            password=body.password,
+        )
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+
+    # Drop straight into the household when there is exactly one, so a
+    # returning person is not asked to choose from a list of one.
+    active = [
+        membership
+        for membership in accounts.memberships_for(session, user)
+        if membership.status.value == "active"
+    ]
+    only = active[0] if len(active) == 1 else None
+    household = (
+        session.get(Household, only.household_id) if only is not None else None
+    )
+    return api_response(
+        data=_session_payload(
+            manager,
+            user,
+            household_id=only.household_id if only is not None else None,
+            household_name=(
+                household.display_name if household is not None else user.display_name
+            ),
+        ),
+        trace_id=trace,
+    )
+
+
+@router.post("/auth/refresh")
+def refresh_session(
+    request: Request,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Exchange a valid session for a fresh one.
+
+    Keeps the household the session was already scoped to, so refreshing does
+    not quietly drop someone back to the household chooser.
+    """
+
+    user, data, trace = auth
+    manager = _session_manager(request, trace)
+    household_id = data.scoped_household_id
+    if household_id is not None:
+        try:
+            accounts.membership_for(session, user=user, household_id=household_id)
+        except accounts.AccountError:
+            # Access was revoked while this session was alive. Refresh into an
+            # account-only session rather than renewing a claim that no longer
+            # holds.
+            household_id = None
+    household = (
+        session.get(Household, household_id) if household_id is not None else None
+    )
+    return api_response(
+        data=_session_payload(
+            manager,
+            user,
+            household_id=household_id,
+            household_name=(
+                household.display_name if household is not None else user.display_name
+            ),
+        ),
+        trace_id=trace,
+    )
+
+
+@router.post("/auth/reset-password")
+def request_password_reset(
+    request: Request,
+    body: schemas.PasswordResetRequest,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Start a password reset.
+
+    Always reports success. Saying whether an address is registered would turn
+    this into an account-enumeration endpoint.
+    """
+
+    trace = trace_id_for(request)
+    try:
+        accounts.normalize_email(body.email)
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    # Delivery is not wired yet; the endpoint exists so the client has one
+    # honest contract to call and nothing is silently dropped on the floor.
+    return api_response(
+        data={"status": "sent", "delivery": "pending"},
+        trace_id=trace,
+    )
+
+
+@router.delete("/auth/account", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> Response:
+    """Delete this account. Household ledgers are not deleted with it."""
+
+    user, _data, _trace = auth
+    accounts.delete_user(session, user)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ============================================================================
+# Households
+# ============================================================================
+
+
+def _household_payload(session: Session, membership: Any) -> dict[str, Any]:
+    view = accounts.household_view(session, membership)
+    return {
+        "id": view.id,
+        "name": view.name,
+        "join_code": view.join_code,
+        "role": view.role,
+        "status": view.status,
+        "member_count": view.member_count,
+    }
+
+
+@router.get("/households")
+def list_households(
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Every household this account belongs to, plus pending requests."""
+
+    user, _data, trace = auth
+    memberships = accounts.memberships_for(session, user)
+    return api_response(
+        data={
+            "items": [
+                _household_payload(session, membership)
+                for membership in memberships
+            ]
+        },
+        trace_id=trace,
+    )
+
+
+@router.post("/households", status_code=status.HTTP_201_CREATED)
+def create_household(
+    request: Request,
+    body: schemas.CreateHouseholdRequest,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Start a household. The creator owns it."""
+
+    user, _data, trace = auth
+    try:
+        household = accounts.create_household(session, owner=user, name=body.name)
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    session.commit()
+    membership = accounts.membership_for(
+        session,
+        user=user,
+        household_id=household.id,
+    )
+    payload = _household_payload(session, membership)
+    # A new household is immediately usable, so hand back a token scoped to it.
+    manager = _session_manager(request, trace)
+    payload["session"] = _session_payload(
+        manager,
+        user,
+        household_id=household.id,
+        household_name=household.display_name,
+    )
+    return api_response(data=payload, trace_id=trace)
+
+
+@router.post("/households/{reference}/join-requests", status_code=status.HTTP_201_CREATED)
+def request_household_access(
+    reference: str,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Ask to join a household by its ID or join code.
+
+    This creates a request. None of that household's data is readable until an
+    owner or admin approves it.
+    """
+
+    user, _data, trace = auth
+    try:
+        household = accounts.resolve_household(session, reference)
+        membership = accounts.request_to_join(session, user=user, household=household)
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    session.commit()
+    return api_response(
+        data=_household_payload(session, membership),
+        trace_id=trace,
+    )
+
+
+@router.delete(
+    "/households/{household_id}/join-requests/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def withdraw_join_request(
+    household_id: int,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> Response:
+    """Withdraw a request this account made."""
+
+    user, _data, trace = auth
+    try:
+        accounts.cancel_request(session, user=user, household_id=household_id)
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/households/{household_id}/select")
+def select_household(
+    request: Request,
+    household_id: int,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Scope this session to one household.
+
+    Household-scoped reads need a token that names the household, so switching
+    household means taking a new token rather than passing an id the server
+    would have to trust.
+    """
+
+    user, _data, trace = auth
+    try:
+        accounts.membership_for(session, user=user, household_id=household_id)
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    household = session.get(Household, household_id)
+    manager = _session_manager(request, trace)
+    return api_response(
+        data=_session_payload(
+            manager,
+            user,
+            household_id=household_id,
+            household_name=(
+                household.display_name if household is not None else "Household"
+            ),
+        ),
+        trace_id=trace,
+    )
+
+
+@router.get("/households/{household_id}/members")
+def list_household_members(
+    household_id: int,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    """Everyone in a household, and everyone asking to be."""
+
+    user, _data, trace = auth
+    try:
+        accounts.membership_for(session, user=user, household_id=household_id)
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    rows = accounts.household_members(session, household_id)
+    return api_response(
+        data={
+            "items": [
+                {
+                    "id": membership.id,
+                    "name": member.display_name,
+                    "email": member.email,
+                    "role": membership.role.value,
+                    "status": membership.status.value,
+                }
+                for membership, member in rows
+            ]
+        },
+        trace_id=trace,
+    )
+
+
+@router.post("/households/{household_id}/join-requests/{membership_id}/approve")
+def approve_join_request(
+    household_id: int,
+    membership_id: str,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    return _decide_request(
+        household_id=household_id,
+        membership_id=membership_id,
+        auth=auth,
+        session=session,
+        approve=True,
+    )
+
+
+@router.post("/households/{household_id}/join-requests/{membership_id}/decline")
+def decline_join_request(
+    household_id: int,
+    membership_id: str,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> dict[str, Any]:
+    return _decide_request(
+        household_id=household_id,
+        membership_id=membership_id,
+        auth=auth,
+        session=session,
+        approve=False,
+    )
+
+
+def _decide_request(
+    *,
+    household_id: int,
+    membership_id: str,
+    auth: tuple[User, SessionData, str],
+    session: Session,
+    approve: bool,
+) -> dict[str, Any]:
+    user, _data, trace = auth
+    try:
+        mine = accounts.membership_for(session, user=user, household_id=household_id)
+        accounts.require_admin(mine)
+        membership = accounts.resolve_request(
+            session,
+            household_id=household_id,
+            membership_id=membership_id,
+            approve=approve,
+        )
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    session.commit()
+    return api_response(
+        data=_household_payload(session, membership),
+        trace_id=trace,
+    )
+
+
+@router.delete(
+    "/households/{household_id}/members/{membership_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_household_member(
+    household_id: int,
+    membership_id: str,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> Response:
+    """Remove someone from a household."""
+
+    user, _data, trace = auth
+    try:
+        mine = accounts.membership_for(session, user=user, household_id=household_id)
+        accounts.require_admin(mine)
+        accounts.remove_member(
+            session,
+            household_id=household_id,
+            membership_id=membership_id,
+        )
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+DbSessionUnused = None
 
 
 # ============================================================================
@@ -259,7 +839,7 @@ def authenticate_with_pin(
     trace = trace_id_for(request)
     settings = get_settings_for(request)
 
-    household = session.get(Household, HOUSEHOLD_ID)
+    household = services.pin_configured_household(session, HOUSEHOLD_ID)
     if household is None:
         raise api_error(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -440,7 +1020,7 @@ def list_receipts(
 ) -> dict[str, Any]:
     """List receipts newest first, with pagination and filters."""
 
-    _household, trace = auth
+    household, trace = auth
 
     filters: list[Any] = []
     if attention_only:
@@ -453,6 +1033,10 @@ def list_receipts(
         filters.append(Receipt.purchase_date >= start_date)
     if end_date:
         filters.append(Receipt.purchase_date <= end_date)
+
+    # Scope before anything else: the rest of this query is presentation, but
+    # this line is what keeps one household out of another's ledger.
+    filters.append(Receipt.household_id == household.id)
 
     condition = and_(*filters) if filters else True
     total = session.scalar(select(func.count(Receipt.id)).where(condition)) or 0
@@ -490,9 +1074,11 @@ def get_receipt(
 ) -> dict[str, Any]:
     """Return one receipt with its line items and balance strip."""
 
-    _household, trace = auth
+    household, trace = auth
     try:
-        receipt = services.load_receipt(session, receipt_id)
+        receipt = services.load_receipt(
+            session, receipt_id, household_id=household.id
+        )
     except services.ServiceError as exc:
         raise service_error(exc, trace) from exc
 
@@ -548,9 +1134,11 @@ def update_receipt(
     the analytics refresh behave identically.
     """
 
-    _household, trace = auth
+    household, trace = auth
     try:
-        receipt = services.load_receipt(session, receipt_id)
+        receipt = services.load_receipt(
+            session, receipt_id, household_id=household.id
+        )
         existing = services.resolve_receipt_items(session, receipt)
         if body.line_items is not None:
             rows = body.line_items
@@ -609,9 +1197,9 @@ def delete_receipt(
 ) -> Response:
     """Delete a receipt and its line items."""
 
-    _household, trace = auth
+    household, trace = auth
     try:
-        services.delete_receipt(session, receipt_id)
+        services.delete_receipt(session, receipt_id, household_id=household.id)
     except services.ServiceError as exc:
         raise service_error(exc, trace) from exc
     session.commit()
@@ -632,9 +1220,11 @@ def get_receipt_image(
     bearer-authenticated route rather than a public or guessable static path.
     """
 
-    _household, trace = auth
+    household, trace = auth
     try:
-        receipt = services.load_receipt(session, receipt_id)
+        receipt = services.load_receipt(
+            session, receipt_id, household_id=household.id
+        )
     except services.ServiceError as exc:
         raise service_error(exc, trace) from exc
 
@@ -779,8 +1369,8 @@ def get_upload_status(
 ) -> dict[str, Any]:
     """Report processing progress for an upload batch."""
 
-    _household, trace = auth
-    job = services.job_payload(session, batch_id)
+    household, trace = auth
+    job = services.job_payload(session, batch_id, household_id=household.id)
     if job is None:
         raise api_error(
             status.HTTP_404_NOT_FOUND,

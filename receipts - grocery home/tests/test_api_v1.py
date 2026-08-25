@@ -712,3 +712,274 @@ def test_a_receipt_reports_the_collection_its_items_fall_into(
     # The review screen edits this, so detail has to carry it.
     assert "transaction_number" in payload
 
+# ============================================================================
+# Accounts, households and tenancy
+# ============================================================================
+
+
+def _register(client: TestClient, email: str, password: str = "correct-horse-9") -> str:
+    """Create an account and return its (household-less) token."""
+
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": password, "display_name": email.split("@")[0]},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["data"]["token"]
+
+
+def _create_household(client: TestClient, token: str, name: str) -> tuple[int, str]:
+    """Create a household and return its id and a token scoped to it."""
+
+    response = client.post(
+        "/api/v1/households",
+        json={"name": name},
+        headers=_auth(token),
+    )
+    assert response.status_code == 201, response.text
+    payload = response.json()["data"]
+    return payload["id"], payload["session"]["token"]
+
+
+def test_an_account_can_be_created_and_used_to_sign_in(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    client, _database, _settings = api
+
+    token = _register(client, "alex@example.com")
+    assert token
+
+    # The same address cannot be registered twice.
+    duplicate = client.post(
+        "/api/v1/auth/register",
+        json={"email": "alex@example.com", "password": "correct-horse-9"},
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"]["code"] == "EMAIL_TAKEN"
+
+    # A short password is refused with something a person can act on.
+    weak = client.post(
+        "/api/v1/auth/register",
+        json={"email": "sam@example.com", "password": "short"},
+    )
+    assert weak.status_code == 400
+    assert weak.json()["error"]["code"] == "INVALID_PASSWORD"
+
+    signed_in = client.post(
+        "/api/v1/auth/login",
+        json={"email": "ALEX@example.com", "password": "correct-horse-9"},
+    )
+    assert signed_in.status_code == 200, signed_in.text
+
+    # A wrong password and an unknown address are indistinguishable, so this
+    # cannot be used to discover who has an account.
+    wrong = client.post(
+        "/api/v1/auth/login",
+        json={"email": "alex@example.com", "password": "not-the-password"},
+    )
+    unknown = client.post(
+        "/api/v1/auth/login",
+        json={"email": "nobody@example.com", "password": "not-the-password"},
+    )
+    assert wrong.status_code == unknown.status_code == 401
+    assert wrong.json()["error"]["message"] == unknown.json()["error"]["message"]
+
+
+def test_an_account_without_a_household_cannot_read_a_ledger(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """An account is not a ledger: receipts need a household."""
+
+    client, _database, _settings = api
+    token = _register(client, "alex@example.com")
+
+    response = client.get("/api/v1/receipts", headers=_auth(token))
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "NO_HOUSEHOLD_SELECTED"
+
+
+def test_one_household_cannot_read_another(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """The cross-tenant denial that multi-tenancy stands or falls on."""
+
+    client, database, settings = api
+
+    # Household 1 holds a receipt, reachable with the shared-PIN session.
+    pin_token = _token(client, database)
+    receipt_id = _seed_review_receipt(database, settings)
+    owner_view = client.get(f"/api/v1/receipts/{receipt_id}", headers=_auth(pin_token))
+    assert owner_view.status_code == 200
+
+    # A different account, with its own household.
+    intruder = _register(client, "intruder@example.com")
+    _household_id, intruder_token = _create_household(
+        client, intruder, "Somewhere else"
+    )
+
+    # Reading someone else's receipt is *not found*, not *forbidden*: the API
+    # does not confirm that the id exists.
+    denied = client.get(
+        f"/api/v1/receipts/{receipt_id}", headers=_auth(intruder_token)
+    )
+    assert denied.status_code == 404
+
+    # It is absent from their ledger entirely.
+    listed = client.get("/api/v1/receipts", headers=_auth(intruder_token)).json()
+    assert listed["data"]["items"] == []
+    assert listed["data"]["pagination"]["total"] == 0
+
+    # And it cannot be deleted out from under its household.
+    deletion = client.delete(
+        f"/api/v1/receipts/{receipt_id}", headers=_auth(intruder_token)
+    )
+    assert deletion.status_code == 404
+
+    still_there = client.get(
+        f"/api/v1/receipts/{receipt_id}", headers=_auth(pin_token)
+    )
+    assert still_there.status_code == 200
+
+
+def test_joining_a_household_is_a_request_until_someone_approves_it(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    client, database, settings = api
+
+    owner = _register(client, "owner@example.com")
+    household_id, owner_token = _create_household(client, owner, "The Morgans")
+
+    joiner = _register(client, "joiner@example.com")
+    requested = client.post(
+        f"/api/v1/households/{household_id}/join-requests",
+        headers=_auth(joiner),
+    )
+    assert requested.status_code == 201, requested.text
+    assert requested.json()["data"]["status"] == "pending"
+    # A pending request never carries the join code.
+    assert requested.json()["data"]["join_code"] is None
+
+    # Pending is not access: the household cannot be selected.
+    blocked = client.post(
+        f"/api/v1/households/{household_id}/select",
+        headers=_auth(joiner),
+    )
+    assert blocked.status_code == 404
+
+    # The owner sees the request with who it is from.
+    members = client.get(
+        f"/api/v1/households/{household_id}/members",
+        headers=_auth(owner_token),
+    ).json()["data"]["items"]
+    pending = [row for row in members if row["status"] == "pending"]
+    assert len(pending) == 1
+    assert pending[0]["email"] == "joiner@example.com"
+    membership_id = pending[0]["id"]
+
+    # A requester cannot approve themselves.
+    self_approval = client.post(
+        f"/api/v1/households/{household_id}/join-requests/{membership_id}/approve",
+        headers=_auth(joiner),
+    )
+    assert self_approval.status_code in (403, 404)
+
+    approved = client.post(
+        f"/api/v1/households/{household_id}/join-requests/{membership_id}/approve",
+        headers=_auth(owner_token),
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["data"]["status"] == "active"
+
+    # Now they can select it and read the ledger.
+    selected = client.post(
+        f"/api/v1/households/{household_id}/select",
+        headers=_auth(joiner),
+    )
+    assert selected.status_code == 200
+    scoped = selected.json()["data"]["token"]
+    assert client.get("/api/v1/receipts", headers=_auth(scoped)).status_code == 200
+
+    # Removing them revokes it, even though their token is unchanged.
+    removed = client.delete(
+        f"/api/v1/households/{household_id}/members/{membership_id}",
+        headers=_auth(owner_token),
+    )
+    assert removed.status_code == 204
+    assert client.get("/api/v1/receipts", headers=_auth(scoped)).status_code == 403
+
+
+def test_an_owner_cannot_be_removed_from_their_household(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    client, _database, _settings = api
+
+    owner = _register(client, "owner@example.com")
+    household_id, owner_token = _create_household(client, owner, "The Morgans")
+    members = client.get(
+        f"/api/v1/households/{household_id}/members",
+        headers=_auth(owner_token),
+    ).json()["data"]["items"]
+    owner_membership = next(row for row in members if row["role"] == "owner")
+
+    response = client.delete(
+        f"/api/v1/households/{household_id}/members/{owner_membership['id']}",
+        headers=_auth(owner_token),
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "CANNOT_REMOVE_OWNER"
+
+
+def test_a_password_reset_never_reveals_whether_an_account_exists(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    client, _database, _settings = api
+    _register(client, "alex@example.com")
+
+    known = client.post(
+        "/api/v1/auth/reset-password", json={"email": "alex@example.com"}
+    )
+    unknown = client.post(
+        "/api/v1/auth/reset-password", json={"email": "nobody@example.com"}
+    )
+    assert known.status_code == unknown.status_code == 200
+    assert known.json()["data"] == unknown.json()["data"]
+
+
+def test_deleting_an_account_leaves_the_household_ledger_intact(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """Receipts belong to the household, not to whoever photographed them."""
+
+    client, database, settings = api
+    pin_token = _token(client, database)
+    receipt_id = _seed_review_receipt(database, settings)
+
+    joiner = _register(client, "joiner@example.com")
+    gone = client.delete("/api/v1/auth/account", headers=_auth(joiner))
+    assert gone.status_code == 204
+
+    # The token stops working.
+    assert client.get("/api/v1/households", headers=_auth(joiner)).status_code == 401
+    # The ledger is untouched.
+    assert (
+        client.get(f"/api/v1/receipts/{receipt_id}", headers=_auth(pin_token)).status_code
+        == 200
+    )
+
+
+def test_refreshing_a_session_keeps_the_chosen_household(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    client, _database, _settings = api
+    owner = _register(client, "owner@example.com")
+    household_id, scoped = _create_household(client, owner, "The Morgans")
+
+    refreshed = client.post("/api/v1/auth/refresh", headers=_auth(scoped))
+    assert refreshed.status_code == 200, refreshed.text
+    new_token = refreshed.json()["data"]["token"]
+
+    # Still scoped: the ledger is readable without choosing again.
+    assert client.get("/api/v1/receipts", headers=_auth(new_token)).status_code == 200
+    assert refreshed.json()["data"]["household_name"] == "The Morgans"
+    assert household_id
+

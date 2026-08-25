@@ -542,6 +542,7 @@ class AppController extends Notifier<AppState> {
         households: <wire.HouseholdSummary>[...state.households, household],
         householdsLoaded: true,
         householdName: household.name,
+        connection: HubConnection.connected,
         isLoading: false,
       );
       await refresh();
@@ -589,13 +590,33 @@ class AppController extends Notifier<AppState> {
     }
   }
 
-  /// Enter a household. Household-scoped data reloads before it is shown.
+  /// Enter a household.
+  ///
+  /// Selecting it on the service first, because household reads are authorised
+  /// by a token that names the household. Data reloads before the household is
+  /// presented as current, so no figure from the previous one lingers.
   Future<String?> enterHousehold(wire.HouseholdSummary household) async {
     state = state.copyWith(
-      householdName: household.name,
-      connection: HubConnection.connected,
+      connection: HubConnection.connecting,
+      isLoading: true,
       clearFailure: true,
     );
+    try {
+      final session = await api.selectHousehold(household.id);
+      state = state.copyWith(
+        householdName: session.householdName.isEmpty
+            ? household.name
+            : session.householdName,
+        connection: HubConnection.connected,
+      );
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(
+        isLoading: false,
+        connection: _connectionFor(failure),
+        failureMessage: failure.message,
+      );
+      return failure.message;
+    }
     await refresh();
     return state.failureMessage;
   }

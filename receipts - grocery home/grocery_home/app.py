@@ -466,7 +466,7 @@ def create_app(
         else:
             return RedirectResponse(_safe_next(request.query_params.get("next")), status_code=303)
         token = generate_csrf_token()
-        household = session.get(Household, 1)
+        household = services.pin_configured_household(session)
         response = TEMPLATES.TemplateResponse(
             request=request,
             name="login.html",
@@ -502,7 +502,7 @@ def create_app(
         expected_csrf = request.cookies.get(LOGIN_CSRF_COOKIE, "")
         if not verify_csrf_token(expected_csrf, supplied_csrf):
             raise HTTPException(status_code=403, detail="The login form expired. Reload it.")
-        household = session.get(Household, 1)
+        household = services.pin_configured_household(session)
         token = generate_csrf_token()
         error: str | None = None
         retry_after = 0

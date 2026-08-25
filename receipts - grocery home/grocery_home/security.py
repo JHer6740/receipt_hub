@@ -155,6 +155,17 @@ class SessionData:
     household_id: int
     generation: int
     csrf_token: str
+    # Set for account sessions. Absent for the legacy shared-PIN session, which
+    # has no notion of a person.
+    user_id: str | None = None
+    # Which household this session is scoped to. `household_id` stays for the
+    # PIN path; account sessions start with no household and gain one when a
+    # person picks it.
+    scoped_household_id: int | None = None
+
+    @property
+    def is_account_session(self) -> bool:
+        return self.user_id is not None
 
 
 @dataclass(frozen=True, slots=True)
@@ -201,6 +212,38 @@ class SessionManager:
         }
         return IssuedSession(token=self._serializer.dumps(payload), data=data)
 
+    def issue_for_user(
+        self,
+        user_id: str,
+        generation: int,
+        *,
+        household_id: int | None = None,
+    ) -> IssuedSession:
+        """Issue a session for an account.
+
+        `household_id` is the household this session may read. It is absent
+        until a person picks one, and membership is re-checked on every request
+        regardless, so a token alone never grants access.
+        """
+
+        data = SessionData(
+            household_id=household_id or 0,
+            generation=generation,
+            csrf_token=generate_csrf_token(),
+            user_id=user_id,
+            scoped_household_id=household_id,
+        )
+        payload = {
+            "v": SESSION_PAYLOAD_VERSION,
+            "sub": 0,
+            "gen": generation,
+            "csrf": data.csrf_token,
+            "uid": user_id,
+        }
+        if household_id is not None:
+            payload["hh"] = household_id
+        return IssuedSession(token=self._serializer.dumps(payload), data=data)
+
     def load(self, token: str | None) -> SessionData:
         if not token:
             raise InvalidSessionError("Session cookie is missing")
@@ -225,10 +268,21 @@ class SessionManager:
         if version != SESSION_PAYLOAD_VERSION or len(csrf_token) < 32:
             raise InvalidSessionError("Session payload is invalid")
 
+        # Absent on shared-PIN sessions, which predate accounts.
+        raw_user = payload.get("uid")
+        user_id = str(raw_user) if raw_user else None
+        raw_household = payload.get("hh")
+        try:
+            scoped = int(raw_household) if raw_household is not None else None
+        except (TypeError, ValueError) as exc:
+            raise InvalidSessionError("Session payload is invalid") from exc
+
         return SessionData(
             household_id=household_id,
             generation=generation,
             csrf_token=csrf_token,
+            user_id=user_id,
+            scoped_household_id=scoped,
         )
 
     def load_request(self, request: Request) -> SessionData:
