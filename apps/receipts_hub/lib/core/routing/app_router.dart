@@ -7,6 +7,8 @@ import '../../features/auth/auth_screens.dart';
 import '../../features/capture/capture_screens.dart';
 import '../../features/developer/host_connection_screen.dart';
 import '../../features/household/household_choice_screen.dart';
+import '../../features/household/household_join_screen.dart';
+import '../../features/household/household_members_screen.dart';
 import '../../features/compare/comparison_screens.dart';
 import '../../features/ledger/ledger_screens.dart';
 import '../../features/onboarding/onboarding_screens.dart';
@@ -15,8 +17,6 @@ import '../../features/receipts/receipt_screens.dart';
 import '../../features/shopping/shopping_list_screen.dart';
 import '../state/app_state.dart';
 import '../widgets/app_shell.dart';
-import '../../ui_ux_revision/mvp_access_screens.dart';
-import '../../ui_ux_revision/mvp_household_admin_screen.dart';
 
 String _origin(GoRouterState state, String fallback) {
   return switch (state.uri.queryParameters['from']) {
@@ -133,12 +133,14 @@ GoRouter createAppRouter({
       GoRoute(
         path: '/household/join',
         name: 'household-join',
-        builder: (context, state) => const MvpAccessScreen(),
+        builder: (context, state) => const HouseholdJoinScreen(),
       ),
       GoRoute(
         path: '/household/members',
         name: 'household-members',
-        builder: (context, state) => const MvpHouseholdAdminScreen(),
+        builder: (context, state) => HouseholdMembersScreen(
+          householdId: state.uri.queryParameters['id'],
+        ),
       ),
       GoRoute(
         path: '/capture',

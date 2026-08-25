@@ -360,7 +360,8 @@ void main() {
   group('host health', () {
     test('reports a healthy host', () async {
       final built = buildApi(
-        (_) => _json(<String, dynamic>{'status': 'ok', 'service': 'grocery-home'}),
+        (_) =>
+            _json(<String, dynamic>{'status': 'ok', 'service': 'grocery-home'}),
       );
 
       expect(await built.api.checkHealth('http://10.0.0.5:8000'), isTrue);

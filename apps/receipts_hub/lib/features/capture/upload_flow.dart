@@ -70,7 +70,8 @@ class CaptureFlowState {
   double get overallFraction => switch (stage) {
     CaptureFlowStage.idle => 0,
     CaptureFlowStage.uploading => uploadFraction * 0.2,
-    CaptureFlowStage.processing => 0.2 + ((progress?.progress ?? 0) / 100) * 0.8,
+    CaptureFlowStage.processing =>
+      0.2 + ((progress?.progress ?? 0) / 100) * 0.8,
     _ => 1,
   };
 

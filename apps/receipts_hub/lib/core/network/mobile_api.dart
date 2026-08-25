@@ -281,6 +281,46 @@ class MobileApi {
     );
   }
 
+  /// Everyone in a household, plus everyone asking to join it.
+  Future<List<HouseholdMember>> householdMembers(String householdId) async {
+    final data = await _get(
+      '/api/v1/households/${Uri.encodeComponent(householdId)}/members',
+    );
+    return <HouseholdMember>[
+      for (final row in (data['items'] as List<dynamic>? ?? const []))
+        if (row is Map<String, dynamic>) HouseholdMember.fromJson(row),
+    ];
+  }
+
+  /// Approve or decline a join request.
+  Future<void> resolveJoinRequest({
+    required String householdId,
+    required String requestId,
+    required bool approve,
+  }) async {
+    await _post(
+      '/api/v1/households/${Uri.encodeComponent(householdId)}'
+      '/join-requests/${Uri.encodeComponent(requestId)}'
+      '/${approve ? 'approve' : 'decline'}',
+      const <String, dynamic>{},
+    );
+  }
+
+  /// Remove someone from a household.
+  Future<void> removeHouseholdMember({
+    required String householdId,
+    required String memberId,
+  }) async {
+    _requireHost();
+    await _send<Map<String, dynamic>>(
+      () => _dio.delete<Map<String, dynamic>>(
+        '$_baseUrl/api/v1/households/${Uri.encodeComponent(householdId)}'
+        '/members/${Uri.encodeComponent(memberId)}',
+        options: _authOptions(),
+      ),
+    );
+  }
+
   Future<BootstrapSnapshot> bootstrap() async {
     final data = await _get('/api/v1/bootstrap');
     return BootstrapSnapshot.fromJson(data);
@@ -587,16 +627,18 @@ class MobileApi {
         ? (error['code'] as String? ?? 'REQUEST_FAILED')
         : 'REQUEST_FAILED';
     final message = error is Map<String, dynamic>
-        ? (error['message'] as String? ?? 'That request could not be completed.')
+        ? (error['message'] as String? ??
+              'That request could not be completed.')
         : 'That request could not be completed.';
     final details = error is Map<String, dynamic>
         ? error['details'] as Map<String, dynamic>?
         : null;
 
     final kind = switch (status) {
-      401 => code == 'INVALID_PIN'
-          ? ApiFailureKind.badPin
-          : ApiFailureKind.unauthorized,
+      401 =>
+        code == 'INVALID_PIN'
+            ? ApiFailureKind.badPin
+            : ApiFailureKind.unauthorized,
       403 => ApiFailureKind.unauthorized,
       404 => ApiFailureKind.notFound,
       409 => ApiFailureKind.conflict,

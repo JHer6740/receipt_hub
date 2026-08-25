@@ -98,8 +98,7 @@ class HouseholdGate extends ConsumerWidget {
           key: const Key('gate-sign-in'),
           icon: Icons.lock_outline_rounded,
           title: 'Your session has ended',
-          message:
-              app.failureMessage ?? 'Sign in to see your household again.',
+          message: app.failureMessage ?? 'Sign in to see your household again.',
           actionLabel: onSignIn == null ? null : 'Sign in',
           onAction: onSignIn,
         );

@@ -59,7 +59,12 @@ abstract final class HouseholdFixture {
       totalCents: 14872,
       taxCents: 913,
       items: const <LineItem>[
-        LineItem(id: 'l-1', name: 'Full cream milk 1 L', qty: 1, lineCents: 520),
+        LineItem(
+          id: 'l-1',
+          name: 'Full cream milk 1 L',
+          qty: 1,
+          lineCents: 520,
+        ),
         LineItem(id: 'l-2', name: 'Sourdough loaf', qty: 1, lineCents: 750),
         LineItem(
           id: 'l-3',
@@ -132,7 +137,12 @@ abstract final class HouseholdFixture {
       totalCents: 12840,
       taxCents: 1167,
       items: const <LineItem>[
-        LineItem(id: 'l-9', name: 'Garden and repair', qty: 1, lineCents: 12840),
+        LineItem(
+          id: 'l-9',
+          name: 'Garden and repair',
+          qty: 1,
+          lineCents: 12840,
+        ),
       ],
       pageImagePaths: const <String>['receipt_1003_page_1.jpg'],
     ),
@@ -408,11 +418,7 @@ class _SeededReceiptListController extends ReceiptListController {
               query.isEmpty || receipt.merchant.toLowerCase().contains(query),
         )
         .toList();
-    state = state.copyWith(
-      query: value,
-      items: matches,
-      total: matches.length,
-    );
+    state = state.copyWith(query: value, items: matches, total: matches.length);
   }
 
   @override
@@ -427,9 +433,7 @@ List<Override> householdOverrides({AppState? state}) => <Override>[
   appControllerProvider.overrideWith(
     () => _SeededAppController(state ?? HouseholdFixture.appState),
   ),
-  comparisonBasketProvider.overrideWithValue(
-    HouseholdFixture.comparisonBasket,
-  ),
+  comparisonBasketProvider.overrideWithValue(HouseholdFixture.comparisonBasket),
   receiptListProvider.overrideWith(_SeededReceiptListController.new),
   // Baselines and assertions describe the shipped surface, so debug-only
   // developer affordances stay out of them.

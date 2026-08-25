@@ -96,6 +96,45 @@ class AccountScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+          // The way in to approving join requests. Account used to carry a
+          // "Members" row that only raised a toast, so requests could not be
+          // approved by anyone at all.
+          const SectionLabel('Household'),
+          const SizedBox(height: 8),
+          LedgerCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: <Widget>[
+                ListTile(
+                  key: const Key('account-people'),
+                  minTileHeight: AppSpacing.rowMinHeight,
+                  leading: const Icon(Icons.group_outlined),
+                  title: const Text('People'),
+                  subtitle: Text(
+                    app.pendingHouseholds.isNotEmpty
+                        ? 'You have a request waiting'
+                        : 'Who can see this household',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/household/members'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('account-households'),
+                  minTileHeight: AppSpacing.rowMinHeight,
+                  leading: const Icon(Icons.swap_horiz_rounded),
+                  title: const Text('Switch household'),
+                  subtitle: Text(
+                    '${app.activeHouseholds.length} '
+                    '${app.activeHouseholds.length == 1 ? 'household' : 'households'}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/household'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           const SectionLabel('Appearance'),
           const SizedBox(height: 8),
           LedgerCard(

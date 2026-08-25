@@ -5,7 +5,5 @@ import 'app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    const ProviderScope(child: ReceiptsHubApp(restoreSession: true)),
-  );
+  runApp(const ProviderScope(child: ReceiptsHubApp(restoreSession: true)));
 }

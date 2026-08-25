@@ -109,9 +109,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ),
             children: <Widget>[
               Text(
-                _isCreating
-                    ? 'Your receipts, in one place'
-                    : 'Welcome back',
+                _isCreating ? 'Your receipts, in one place' : 'Welcome back',
                 style: AppText.displayM,
               ),
               const SizedBox(height: 10),

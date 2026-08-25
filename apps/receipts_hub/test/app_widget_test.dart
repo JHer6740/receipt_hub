@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:receipts_hub/app.dart';
 import 'package:receipts_hub/core/routing/app_router.dart';
+import 'package:receipts_hub/features/onboarding/splash_screen.dart';
+import 'package:receipts_hub/core/models/models.dart';
+import 'package:receipts_hub/core/state/app_state.dart';
 
 import 'fixtures/household_fixture.dart';
 
@@ -100,24 +103,25 @@ void main() {
     expect(find.bySemanticsLabel('Take photo'), findsNothing);
   });
 
-  testWidgets('the shutter reports a missing camera instead of queueing a page', (
-    tester,
-  ) async {
-    await pumpHub(tester, location: '/capture');
+  testWidgets(
+    'the shutter reports a missing camera instead of queueing a page',
+    (tester) async {
+      await pumpHub(tester, location: '/capture');
 
-    expect(find.text('Read'), findsNothing);
-    await tester.tap(find.bySemanticsLabel('Take photo'));
-    await tester.pumpAndSettle();
+      expect(find.text('Read'), findsNothing);
+      await tester.tap(find.bySemanticsLabel('Take photo'));
+      await tester.pumpAndSettle();
 
-    // No camera means no photo. This used to append a `demo://` page that
-    // could never upload.
-    expect(
-      find.text('The camera is not ready. Import from your gallery instead.'),
-      findsOneWidget,
-    );
-    expect(find.text('Page 1'), findsNothing);
-    expect(find.text('Read'), findsNothing);
-  });
+      // No camera means no photo. This used to append a `demo://` page that
+      // could never upload.
+      expect(
+        find.text('The camera is not ready. Import from your gallery instead.'),
+        findsOneWidget,
+      );
+      expect(find.text('Page 1'), findsNothing);
+      expect(find.text('Read'), findsNothing);
+    },
+  );
 
   testWidgets('receipt search and attention filter expose useful states', (
     tester,
@@ -198,6 +202,75 @@ void main() {
     // whatever it can find.
     await pumpHub(tester, location: '/rivals', household: false);
     expect(find.byKey(const Key('rivals-no-coverage')), findsOneWidget);
+  });
+
+  testWidgets('a signed-out deep link cannot reach the ledger', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // There was no redirect at all, so /home opened for anyone who linked to
+    // it and `onboardingComplete` was written four times and read never.
+    final router = createAppRouter(
+      initialLocation: '/home',
+      readState: () =>
+          const AppState(receipts: <Receipt>[], shopping: <ShoppingEntry>[]),
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: releaseSurfaceOverrides(),
+        child: ReceiptsHubApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your receipts,\nworth something to you'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+  });
+
+  testWidgets('a restoring session waits instead of showing first run', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter(
+      initialLocation: '/home',
+      readState: () => const AppState(
+        receipts: <Receipt>[],
+        shopping: <ShoppingEntry>[],
+        connection: HubConnection.connecting,
+      ),
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: releaseSurfaceOverrides(),
+        child: ReceiptsHubApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Holding on the splash, not bouncing a signed-in person to the door.
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.text('Get started'), findsNothing);
+  });
+
+  testWidgets('account offers a way in to approving join requests', (
+    tester,
+  ) async {
+    await pumpHub(tester, location: '/account');
+
+    // Account used to carry a "Members" row that only raised a toast, so a
+    // join request could not be approved by anybody.
+    expect(find.byKey(const Key('account-people')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('account-people')));
+    await tester.pumpAndSettle();
+    expect(find.text('People'), findsWidgets);
   });
 
   testWidgets(

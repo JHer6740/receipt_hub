@@ -67,14 +67,16 @@ class ThemeController extends Notifier<ThemePreference> {
 
   void _persist() {
     final keepPhotos = ref.read(appControllerProvider).keepPhotos;
-    ref.read(preferencesStoreProvider).save(
-      StoredPreferences(
-        colorway: state.colorway,
-        darkMode: state.mode == ThemeMode.dark,
-        keepPhotos: keepPhotos,
-        largerText: state.largerText,
-      ),
-    );
+    ref
+        .read(preferencesStoreProvider)
+        .save(
+          StoredPreferences(
+            colorway: state.colorway,
+            darkMode: state.mode == ThemeMode.dark,
+            keepPhotos: keepPhotos,
+            largerText: state.largerText,
+          ),
+        );
   }
 }
 
@@ -319,10 +321,8 @@ class AppController extends Notifier<AppState> {
   /// Insights and the ledger. An empty ledger is the honest starting point;
   /// screens render their empty state until the service answers.
   @override
-  AppState build() => const AppState(
-    receipts: <Receipt>[],
-    shopping: <ShoppingEntry>[],
-  );
+  AppState build() =>
+      const AppState(receipts: <Receipt>[], shopping: <ShoppingEntry>[]);
 
   ReceiptsRepository get _repository => ref.read(receiptsRepositoryProvider);
   MobileApi get api => ref.read(mobileApiProvider);
@@ -368,10 +368,8 @@ class AppController extends Notifier<AppState> {
   );
 
   /// Sign in with an email and password.
-  Future<String?> logIn({
-    required String email,
-    required String password,
-  }) => _withSession(() => api.logIn(email: email, password: password));
+  Future<String?> logIn({required String email, required String password}) =>
+      _withSession(() => api.logIn(email: email, password: password));
 
   Future<String?> requestPasswordReset(String email) async {
     state = state.copyWith(isLoading: true, clearFailure: true);
@@ -613,15 +611,18 @@ class AppController extends Notifier<AppState> {
   void setKeepPhotos(bool value) {
     state = state.copyWith(keepPhotos: value);
     final theme = ref.read(themeControllerProvider);
-    ref.read(preferencesStoreProvider).save(
-      StoredPreferences(
-        colorway: theme.colorway,
-        darkMode: theme.mode == ThemeMode.dark,
-        keepPhotos: value,
-        largerText: theme.largerText,
-      ),
-    );
+    ref
+        .read(preferencesStoreProvider)
+        .save(
+          StoredPreferences(
+            colorway: theme.colorway,
+            darkMode: theme.mode == ThemeMode.dark,
+            keepPhotos: value,
+            largerText: theme.largerText,
+          ),
+        );
   }
+
   void setSearch(String value) => state = state.copyWith(searchQuery: value);
   void setAttentionOnly(bool value) =>
       state = state.copyWith(attentionOnly: value);
@@ -734,7 +735,9 @@ class AppController extends Notifier<AppState> {
       );
       state = state.copyWith(
         shopping: state.shopping
-            .map((item) => item.id == id ? ShoppingEntry.fromWire(updated) : item)
+            .map(
+              (item) => item.id == id ? ShoppingEntry.fromWire(updated) : item,
+            )
             .toList(),
       );
     } on ApiFailure catch (failure) {
@@ -993,13 +996,12 @@ final receiptByIdProvider = Provider.family<Receipt?, String>((ref, id) {
 ///
 /// The ledger list carries only summaries, so the review and view surfaces
 /// load line items, tax, warnings, duplicate state and image URLs separately.
-final receiptDetailProvider = FutureProvider.family<wire.ReceiptDetail?, String>(
-  (ref, id) async {
-    final api = ref.watch(mobileApiProvider);
-    if (!api.hasSession) return null;
-    return ref.watch(receiptsRepositoryProvider).loadReceiptDetail(id);
-  },
-);
+final receiptDetailProvider =
+    FutureProvider.family<wire.ReceiptDetail?, String>((ref, id) async {
+      final api = ref.watch(mobileApiProvider);
+      if (!api.hasSession) return null;
+      return ref.watch(receiptsRepositoryProvider).loadReceiptDetail(id);
+    });
 
 /// One receipt with everything the service knows about it.
 ///

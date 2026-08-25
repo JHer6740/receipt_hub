@@ -666,3 +666,35 @@ class HouseholdSummary {
         memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
       );
 }
+
+/// One person in a household, or one person asking to be.
+class HouseholdMember {
+  const HouseholdMember({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.status,
+  });
+
+  final String id;
+  final String name;
+  final String email;
+
+  /// `owner`, `admin`, `member` or `viewer`.
+  final String role;
+
+  /// `active` or `pending`.
+  final String status;
+
+  bool get isPending => status == 'pending';
+
+  factory HouseholdMember.fromJson(Map<String, dynamic> json) =>
+      HouseholdMember(
+        id: json['id']?.toString() ?? '',
+        name: json['name'] as String? ?? json['email'] as String? ?? 'Someone',
+        email: json['email'] as String? ?? '',
+        role: json['role'] as String? ?? 'member',
+        status: json['status'] as String? ?? 'active',
+      );
+}

@@ -273,7 +273,7 @@ class _CollectionBody extends ConsumerWidget {
         ? 0
         : collection.monthCents / collection.receiptCount;
     // Share of spend is measured against this household's own collections,
-        // not a fixed reference total.
+    // not a fixed reference total.
     final allCollectionsTotal = figures.collections.fold<int>(
       0,
       (total, item) => total + item.monthCents,
@@ -336,10 +336,7 @@ class _CollectionBody extends ConsumerWidget {
                       ),
                     ),
                     Expanded(
-                      child: KeyValueStat(
-                        label: 'of spend',
-                        value: '$share%',
-                      ),
+                      child: KeyValueStat(label: 'of spend', value: '$share%'),
                     ),
                   ],
                 ),

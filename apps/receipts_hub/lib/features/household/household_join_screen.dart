@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/design/app_components.dart';
-import '../core/design/app_theme.dart';
-import '../core/state/app_state.dart';
+import '../../core/design/app_components.dart';
+import '../../core/design/app_theme.dart';
+import '../../core/state/app_state.dart';
 
-class MvpAccessScreen extends ConsumerStatefulWidget {
-  const MvpAccessScreen({super.key});
+/// Ask to join a household that already exists.
+///
+/// Lived at `lib/ui_ux_revision/` with an `Mvp` class prefix, which the
+/// folder's own acceptance bar forbade ("No Preview, MVP, dev language").
+class HouseholdJoinScreen extends ConsumerStatefulWidget {
+  const HouseholdJoinScreen({super.key});
 
   @override
-  ConsumerState<MvpAccessScreen> createState() => _MvpAccessScreenState();
+  ConsumerState<HouseholdJoinScreen> createState() =>
+      _HouseholdJoinScreenState();
 }
 
-class _MvpAccessScreenState extends ConsumerState<MvpAccessScreen> {
+class _HouseholdJoinScreenState extends ConsumerState<HouseholdJoinScreen> {
   final _householdController = TextEditingController();
   bool _requestSent = false;
   bool _busy = false;
@@ -55,7 +60,12 @@ class _MvpAccessScreenState extends ConsumerState<MvpAccessScreen> {
       appBar: AppBar(title: const Text('Join a household')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, 16, AppSpacing.gutter, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            16,
+            AppSpacing.gutter,
+            32,
+          ),
           children: [
             const ReceiptAppMark(size: 52),
             const SizedBox(height: 24),
@@ -98,7 +108,10 @@ class _MvpAccessScreenState extends ConsumerState<MvpAccessScreen> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
-                Text(_error!, style: AppText.bodyS.copyWith(color: colors.error)),
+                Text(
+                  _error!,
+                  style: AppText.bodyS.copyWith(color: colors.error),
+                ),
               ],
               const SizedBox(height: 20),
               FilledButton(
@@ -114,9 +127,8 @@ class _MvpAccessScreenState extends ConsumerState<MvpAccessScreen> {
             ],
             const SizedBox(height: 16),
             TextButton(
-              onPressed: () => context.canPop()
-                  ? context.pop()
-                  : context.go('/household'),
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/household'),
               child: Text(_requestSent ? 'Back to my households' : 'Not now'),
             ),
           ],

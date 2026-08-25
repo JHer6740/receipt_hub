@@ -221,7 +221,9 @@ class _HouseholdChoiceScreenState extends ConsumerState<HouseholdChoiceScreen> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
                       'You are not in a household yet.',
-                      style: AppText.bodyS.copyWith(color: colors.textSecondary),
+                      style: AppText.bodyS.copyWith(
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ),
 

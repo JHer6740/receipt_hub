@@ -25,9 +25,7 @@ bool get hostOverrideAvailable => kDebugMode && AppConfig.allowHostOverride;
 ///
 /// A provider rather than a bare getter so golden baselines can render the
 /// release surface instead of whatever the debug build happens to expose.
-final developerToolsProvider = Provider<bool>(
-  (ref) => hostOverrideAvailable,
-);
+final developerToolsProvider = Provider<bool>((ref) => hostOverrideAvailable);
 
 class HostConnectionScreen extends ConsumerStatefulWidget {
   const HostConnectionScreen({super.key});
