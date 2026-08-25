@@ -28,6 +28,21 @@ abstract final class AppConfig {
 
   static const termsUrl = String.fromEnvironment('RECEIPTS_HUB_TERMS_URL');
 
+  /// Where a person can act on their own data: access, export, correction,
+  /// deletion, consent. Required in-app by the legal handover, and usable as
+  /// Apple's optional Privacy Choices URL.
+  static const privacyChoicesUrl = String.fromEnvironment(
+    'RECEIPTS_HUB_PRIVACY_CHOICES_URL',
+  );
+
+  /// Google Play requires a web page for account deletion that does not
+  /// depend on having the app installed.
+  static const accountDeletionUrl = String.fromEnvironment(
+    'RECEIPTS_HUB_ACCOUNT_DELETION_URL',
+  );
+
+  static const cookiesUrl = String.fromEnvironment('RECEIPTS_HUB_COOKIES_URL');
+
   static const supportEmail = String.fromEnvironment(
     'RECEIPTS_HUB_SUPPORT_EMAIL',
   );

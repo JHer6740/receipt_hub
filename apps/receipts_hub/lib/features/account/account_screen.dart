@@ -224,6 +224,8 @@ class AccountScreen extends ConsumerWidget {
           // worse than none, and both are required to list the app anyway.
           if (AppConfig.privacyPolicyUrl.isNotEmpty ||
               AppConfig.termsUrl.isNotEmpty ||
+              AppConfig.privacyChoicesUrl.isNotEmpty ||
+              AppConfig.cookiesUrl.isNotEmpty ||
               AppConfig.supportEmail.isNotEmpty) ...<Widget>[
             const SizedBox(height: 24),
             const SectionLabel('About'),
@@ -247,6 +249,25 @@ class AccountScreen extends ConsumerWidget {
                       title: const Text('Terms of use'),
                       trailing: const Icon(Icons.open_in_new_rounded, size: 18),
                       onTap: () => _open(context, AppConfig.termsUrl),
+                    ),
+                  if (AppConfig.privacyChoicesUrl.isNotEmpty)
+                    ListTile(
+                      minTileHeight: AppSpacing.rowMinHeight,
+                      leading: const Icon(Icons.tune_rounded),
+                      title: const Text('Your privacy choices'),
+                      subtitle: const Text(
+                        'Access, export, correct or delete your information',
+                      ),
+                      trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                      onTap: () => _open(context, AppConfig.privacyChoicesUrl),
+                    ),
+                  if (AppConfig.cookiesUrl.isNotEmpty)
+                    ListTile(
+                      minTileHeight: AppSpacing.rowMinHeight,
+                      leading: const Icon(Icons.cookie_outlined),
+                      title: const Text('Cookies and tracking'),
+                      trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                      onTap: () => _open(context, AppConfig.cookiesUrl),
                     ),
                   if (AppConfig.supportEmail.isNotEmpty)
                     ListTile(
