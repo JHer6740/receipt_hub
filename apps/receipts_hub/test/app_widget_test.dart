@@ -273,6 +273,36 @@ void main() {
     expect(find.text('People'), findsWidgets);
   });
 
+  testWidgets('deleting an account cannot be tapped through', (tester) async {
+    await pumpHub(tester, location: '/account');
+
+    await tester.ensureVisible(find.byKey(const Key('account-delete')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('account-delete')));
+    await tester.pumpAndSettle();
+
+    // First step explains what survives deletion.
+    expect(find.text('Delete your account?'), findsOneWidget);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Second step needs the word typed, so it is not a two-tap mistake.
+    final confirm = find.widgetWithText(FilledButton, 'Delete my account');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+
+    await tester.enterText(
+      find.byKey(const Key('confirm-delete-field')),
+      'delete',
+    );
+    await tester.pump();
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+  });
+
+  testWidgets('export is offered for the current household', (tester) async {
+    await pumpHub(tester, location: '/account');
+    expect(find.byKey(const Key('account-export')), findsOneWidget);
+  });
+
   testWidgets(
     'reference layout keeps navigation, text and targets accessible',
     (tester) async {

@@ -15,6 +15,8 @@ tokens along with browser sessions.
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Sequence
@@ -387,6 +389,57 @@ def _session_payload(
 # ============================================================================
 
 
+def _throttle_auth_attempt(
+    request: Request,
+    session: Session,
+    *,
+    scope: str,
+    trace: str,
+) -> None:
+    """Refuse an auth attempt that has already failed too often.
+
+    The PIN throttle guarded `/auth/pin` only, leaving registration, sign-in
+    and password reset open to unlimited guessing from one address. The scope
+    keeps the counters separate so failed sign-ins do not lock out signup.
+    """
+
+    throttle: PinThrottle | None = getattr(request.app.state, "pin_throttle", None)
+    if throttle is None:
+        return
+    client_key = request.client.host if request.client else "unknown"
+    decision = throttle.check(session, f"{scope}:{client_key}")
+    if not decision.allowed:
+        raise api_error(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "RATE_LIMITED",
+            "Too many attempts. Wait "
+            f"{decision.retry_after_seconds} seconds and try again.",
+            trace_id=trace,
+            details={"retry_after_seconds": decision.retry_after_seconds},
+        )
+
+
+def _record_auth_failure(
+    request: Request,
+    session: Session,
+    *,
+    scope: str,
+) -> None:
+    """Count a failed auth attempt, and commit it.
+
+    Committed separately because raising afterwards would roll the counter back
+    with the request transaction — the same mistake that once made the PIN
+    brute-forceable regardless of the configured limit.
+    """
+
+    throttle: PinThrottle | None = getattr(request.app.state, "pin_throttle", None)
+    if throttle is None:
+        return
+    client_key = request.client.host if request.client else "unknown"
+    throttle.record_failure(session, f"{scope}:{client_key}")
+    session.commit()
+
+
 @router.post("/auth/register", status_code=status.HTTP_201_CREATED)
 def register_account(
     request: Request,
@@ -397,6 +450,7 @@ def register_account(
 
     trace = trace_id_for(request)
     manager = _session_manager(request, trace)
+    _throttle_auth_attempt(request, session, scope="register", trace=trace)
     try:
         user = accounts.register_user(
             session,
@@ -405,6 +459,7 @@ def register_account(
             display_name=body.display_name,
         )
     except accounts.AccountError as exc:
+        _record_auth_failure(request, session, scope="register")
         raise _account_error(exc, trace) from exc
     session.commit()
     return api_response(
@@ -428,6 +483,7 @@ def log_in(
 
     trace = trace_id_for(request)
     manager = _session_manager(request, trace)
+    _throttle_auth_attempt(request, session, scope="login", trace=trace)
     try:
         user = accounts.authenticate_user(
             session,
@@ -435,6 +491,7 @@ def log_in(
             password=body.password,
         )
     except accounts.AccountError as exc:
+        _record_auth_failure(request, session, scope="login")
         raise _account_error(exc, trace) from exc
 
     # Drop straight into the household when there is exactly one, so a
@@ -513,10 +570,13 @@ def request_password_reset(
     """
 
     trace = trace_id_for(request)
+    _throttle_auth_attempt(request, session, scope="reset", trace=trace)
     try:
         accounts.normalize_email(body.email)
     except accounts.AccountError as exc:
+        _record_auth_failure(request, session, scope="reset")
         raise _account_error(exc, trace) from exc
+    _record_auth_failure(request, session, scope="reset")
     # Delivery is not wired yet; the endpoint exists so the client has one
     # honest contract to call and nothing is silently dropped on the floor.
     return api_response(
@@ -553,6 +613,89 @@ def _household_payload(session: Session, membership: Any) -> dict[str, Any]:
         "status": view.status,
         "member_count": view.member_count,
     }
+
+
+@router.get("/households/{household_id}/export")
+def export_household(
+    household_id: int,
+    auth: AuthenticatedAccount,
+    session: DbSession,
+) -> Response:
+    """Download this household's ledger as CSV.
+
+    A paid product that can delete an account has to be able to hand the data
+    back first. One row per line item, with the receipt it came from, so the
+    file is useful in a spreadsheet without further processing.
+    """
+
+    user, _data, trace = auth
+    try:
+        accounts.membership_for(session, user=user, household_id=household_id)
+    except accounts.AccountError as exc:
+        raise _account_error(exc, trace) from exc
+
+    receipts = session.scalars(
+        select(Receipt)
+        .where(Receipt.household_id == household_id)
+        .order_by(desc(Receipt.purchase_date), desc(Receipt.created_at))
+        .options(selectinload(Receipt.items))
+    ).all()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "receipt_id",
+            "purchase_date",
+            "merchant",
+            "receipt_total_cents",
+            "receipt_tax_cents",
+            "status",
+            "line_number",
+            "description",
+            "quantity",
+            "unit",
+            "unit_price_cents",
+            "line_total_cents",
+            "category",
+        ]
+    )
+    for receipt in receipts:
+        common = [
+            receipt.id,
+            receipt.purchase_date.isoformat() if receipt.purchase_date else "",
+            receipt.merchant_name or receipt.store_name or "",
+            receipt.total_cents or 0,
+            receipt.gst_cents or 0,
+            services.enum_value(receipt.status),
+        ]
+        if not receipt.items:
+            # A receipt with no line items still belongs in the export.
+            writer.writerow(common + ["", "", "", "", "", "", ""])
+            continue
+        for item in receipt.items:
+            writer.writerow(
+                common
+                + [
+                    item.line_number,
+                    item.description,
+                    format(item.quantity.normalize(), "f") if item.quantity else "",
+                    item.quantity_unit or "",
+                    item.unit_price_cents if item.unit_price_cents else "",
+                    item.line_total_cents or 0,
+                    item.category or "",
+                ]
+            )
+
+    filename = f"receipts-hub-household-{household_id}.csv"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.get("/households")

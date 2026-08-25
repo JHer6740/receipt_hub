@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Release: HTTPS only.
+
+  The app previously set android:usesCleartextTraffic="true" across the whole
+  application so it could talk to a home computer over plain HTTP. A hosted
+  product has no reason to send a receipt, a password or a bearer token in the
+  clear, so cleartext is refused outright here.
+
+  The debug build overrides this file to allow loopback and the emulator host,
+  which is the only way to drive the app against a local backend.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

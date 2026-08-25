@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../core/network/mobile_api.dart';
+import '../../core/data/receipts_repository.dart';
+import '../../core/config/app_config.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -174,6 +181,87 @@ class AccountScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+          const SectionLabel('Your data'),
+          const SizedBox(height: 8),
+          LedgerCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: <Widget>[
+                ListTile(
+                  key: const Key('account-export'),
+                  minTileHeight: AppSpacing.rowMinHeight,
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('Export this household'),
+                  subtitle: const Text(
+                    'Every receipt and line item, as a spreadsheet.',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: app.connected
+                      ? () => _exportHousehold(context, ref)
+                      : null,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('account-delete'),
+                  minTileHeight: AppSpacing.rowMinHeight,
+                  leading: Icon(
+                    Icons.person_remove_outlined,
+                    color: colors.error,
+                  ),
+                  title: Text(
+                    'Delete my account',
+                    style: TextStyle(color: colors.error),
+                  ),
+                  subtitle: const Text(
+                    'Removes your account. Household receipts stay.',
+                  ),
+                  onTap: () => _confirmDeleteAccount(context, ref),
+                ),
+              ],
+            ),
+          ),
+          // Only rendered once these are real URLs. A dead privacy link is
+          // worse than none, and both are required to list the app anyway.
+          if (AppConfig.privacyPolicyUrl.isNotEmpty ||
+              AppConfig.termsUrl.isNotEmpty ||
+              AppConfig.supportEmail.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 24),
+            const SectionLabel('About'),
+            const SizedBox(height: 8),
+            LedgerCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: <Widget>[
+                  if (AppConfig.privacyPolicyUrl.isNotEmpty)
+                    ListTile(
+                      minTileHeight: AppSpacing.rowMinHeight,
+                      leading: const Icon(Icons.lock_outline_rounded),
+                      title: const Text('Privacy policy'),
+                      trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                      onTap: () => _open(context, AppConfig.privacyPolicyUrl),
+                    ),
+                  if (AppConfig.termsUrl.isNotEmpty)
+                    ListTile(
+                      minTileHeight: AppSpacing.rowMinHeight,
+                      leading: const Icon(Icons.description_outlined),
+                      title: const Text('Terms of use'),
+                      trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                      onTap: () => _open(context, AppConfig.termsUrl),
+                    ),
+                  if (AppConfig.supportEmail.isNotEmpty)
+                    ListTile(
+                      minTileHeight: AppSpacing.rowMinHeight,
+                      leading: const Icon(Icons.mail_outline_rounded),
+                      title: const Text('Contact support'),
+                      trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                      onTap: () =>
+                          _open(context, 'mailto:${AppConfig.supportEmail}'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
           const SectionLabel('Receipts and reading'),
           const SizedBox(height: 8),
           LedgerCard(
@@ -230,6 +318,112 @@ class AccountScreen extends ConsumerWidget {
     _ => 'Sign in to see your household.',
   };
 
+  Future<void> _open(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      showOutcomeToast(
+        context,
+        'Could not open that link',
+        hasNavigation: false,
+      );
+    }
+  }
+
+  Future<void> _exportHousehold(BuildContext context, WidgetRef ref) async {
+    final app = ref.read(appControllerProvider);
+    final household = app.activeHouseholds.isEmpty
+        ? null
+        : app.activeHouseholds.first;
+    if (household == null) {
+      showOutcomeToast(
+        context,
+        'Choose a household first',
+        hasNavigation: false,
+      );
+      return;
+    }
+    try {
+      final bytes = await ref
+          .read(mobileApiProvider)
+          .exportHousehold(household.id);
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/receipts-hub-${household.id}.csv');
+      await file.writeAsBytes(bytes, flush: true);
+      if (!context.mounted) return;
+      // Hand it to the OS share sheet: an in-app viewer would be a worse way
+      // to get a spreadsheet somewhere useful.
+      await SharePlus.instance.share(
+        ShareParams(
+          files: <XFile>[XFile(file.path, mimeType: 'text/csv')],
+          subject: '${household.name} receipts',
+        ),
+      );
+    } on ApiFailure catch (failure) {
+      if (!context.mounted) return;
+      showOutcomeToast(context, failure.message, hasNavigation: false);
+    } on Object {
+      if (!context.mounted) return;
+      showOutcomeToast(
+        context,
+        'Your data could not be saved to this device.',
+        hasNavigation: false,
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final colors = context.appColors;
+    // Two steps, because this cannot be undone. The first explains what
+    // survives; the second requires typing, so it cannot be tapped through.
+    final understood = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete your account?'),
+        content: const Text(
+          'Your account and its access to every household are removed. '
+          'Receipts already filed stay with the household — they belong to it, '
+          'not to you. This cannot be undone.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep my account'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.error,
+              foregroundColor: colors.onPrimary,
+            ),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (understood != true || !context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => const _ConfirmDeleteDialog(),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final failure = await ref
+        .read(appControllerProvider.notifier)
+        .deleteAccount();
+    if (!context.mounted) return;
+    if (failure != null) {
+      showOutcomeToast(context, failure, hasNavigation: false);
+      return;
+    }
+    context.go('/welcome');
+  }
+
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -255,5 +449,61 @@ class AccountScreen extends ConsumerWidget {
     await ref.read(appControllerProvider.notifier).signOut();
     if (!context.mounted) return;
     context.go('/welcome');
+  }
+}
+
+/// Requires the word DELETE, so an irreversible action cannot be tapped
+/// through by accident.
+class _ConfirmDeleteDialog extends StatefulWidget {
+  const _ConfirmDeleteDialog();
+
+  @override
+  State<_ConfirmDeleteDialog> createState() => _ConfirmDeleteDialogState();
+}
+
+class _ConfirmDeleteDialogState extends State<_ConfirmDeleteDialog> {
+  final _controller = TextEditingController();
+  static const _word = 'DELETE';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final matches = _controller.text.trim().toUpperCase() == _word;
+    return AlertDialog(
+      title: const Text('Type DELETE to confirm'),
+      content: TextField(
+        key: const Key('confirm-delete-field'),
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.characters,
+        decoration: const InputDecoration(labelText: 'DELETE'),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: matches ? () => Navigator.of(context).pop(true) : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.error,
+            foregroundColor: colors.onPrimary,
+          ),
+          child: const Text('Delete my account'),
+        ),
+      ],
+    );
   }
 }

@@ -590,6 +590,22 @@ class AppController extends Notifier<AppState> {
     }
   }
 
+  /// Permanently delete this account.
+  ///
+  /// Returns null on success. The household ledger is untouched: receipts
+  /// belong to the household, not to whoever photographed them.
+  Future<String?> deleteAccount() async {
+    state = state.copyWith(isLoading: true, clearFailure: true);
+    try {
+      await api.deleteAccount();
+      state = build().copyWith(connection: HubConnection.signedOut);
+      return null;
+    } on ApiFailure catch (failure) {
+      state = state.copyWith(isLoading: false, failureMessage: failure.message);
+      return failure.message;
+    }
+  }
+
   /// Enter a household.
   ///
   /// Selecting it on the service first, because household reads are authorised

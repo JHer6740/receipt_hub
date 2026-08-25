@@ -1,3 +1,16 @@
+import java.util.Properties
+
+// Release signing and the App Link host are deployment secrets/settings, so
+// they live in android/key.properties, which is git-ignored. Without that file
+// a release build falls back to debug keys and refuses to pretend otherwise.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -28,13 +41,44 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Substituted into AndroidManifest.xml for the App Link intent-filter.
+        manifestPlaceholders["appLinkHost"] =
+            keystoreProperties.getProperty("appLinkHost") ?: "receipts.aacu-church.org"
+    }
+
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Debug keys cannot be published, so a release build without a real
+            // keystore is marked as unsigned-for-release rather than quietly
+            // producing an APK that looks shippable.
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "No android/key.properties found: signing this release with " +
+                        "DEBUG keys. It cannot be uploaded to Play. See " +
+                        "android/key.properties.example."
+                )
+                signingConfigs.getByName("debug")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

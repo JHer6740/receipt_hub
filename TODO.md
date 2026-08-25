@@ -84,6 +84,11 @@ below.
 - [ ] **Rate limiting on the new auth routes.** The PIN throttle (`PinThrottle`) protects `/auth/pin` only; `/auth/register`, `/auth/login` and `/auth/reset-password` are currently unthrottled. Do this before exposing the service publicly.
 - [ ] Ownership transfer. An owner cannot be removed and there is no way to hand ownership over, so a household whose owner leaves cannot be re-administered.
 
+## Known issues — 21 August 2026
+
+- [ ] **Flaky backend tests under load.** `test_a_tampered_token_is_rejected` and `test_api_pin_auth_issues_and_validates_signed_session` failed intermittently while a Gradle build and an emulator were competing for the machine, then passed on three consecutive clean full runs. Both are timing-sensitive around the PIN throttle. Not reproduced in isolation; worth pinning down rather than assuming it is only load.
+- [ ] **Emulator package service is wedged.** `adb shell pm ...` returns `Broken pipe` on `emulator-5554` after it ran out of storage. Sections B and C have therefore never been seen running on a device. Cold boot or wipe the AVD (`flutter emulators --launch Medium_Phone_API_36.1`, then Wipe Data from the AVD manager) before the next device check.
+
 ## NEXT SESSION — section D: commercial release
 
 - [ ] Remove `android:usesCleartextTraffic="true"` from the manifest; HTTPS only.

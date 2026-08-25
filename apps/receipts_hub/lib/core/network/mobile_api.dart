@@ -310,6 +310,44 @@ class MobileApi {
     );
   }
 
+  /// Download a household's ledger as CSV bytes.
+  Future<List<int>> exportHousehold(String householdId) async {
+    _requireHost();
+    try {
+      final response = await _dio.get<List<int>>(
+        '$_baseUrl/api/v1/households/${Uri.encodeComponent(householdId)}/export',
+        options: Options(
+          headers: _authOptions().headers,
+          responseType: ResponseType.bytes,
+        ),
+      );
+      final data = response.data;
+      if (response.statusCode != 200 || data == null) {
+        throw const ApiFailure(
+          kind: ApiFailureKind.server,
+          code: 'EXPORT_FAILED',
+          message: 'Your data could not be prepared. Try again shortly.',
+        );
+      }
+      return data;
+    } on DioException catch (error) {
+      throw _mapTransportError(error);
+    }
+  }
+
+  /// Permanently delete this account. Household ledgers are not deleted.
+  Future<void> deleteAccount() async {
+    _requireHost();
+    await _send<Map<String, dynamic>>(
+      () => _dio.delete<Map<String, dynamic>>(
+        '$_baseUrl/api/v1/auth/account',
+        options: _authOptions(),
+      ),
+    );
+    _token = null;
+    await _secureStorage.delete(key: _tokenKey);
+  }
+
   /// Everyone in a household, plus everyone asking to join it.
   Future<List<HouseholdMember>> householdMembers(String householdId) async {
     final data = await _get(

@@ -983,3 +983,88 @@ def test_refreshing_a_session_keeps_the_chosen_household(
     assert refreshed.json()["data"]["household_name"] == "The Morgans"
     assert household_id
 
+
+def test_repeated_sign_in_failures_are_throttled(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """Only /auth/pin was throttled, so sign-in could be guessed at forever."""
+
+    client, _database, _settings = api
+    _register(client, "alex@example.com")
+
+    statuses = []
+    for _ in range(8):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "alex@example.com", "password": "not-the-password"},
+        )
+        statuses.append(response.status_code)
+
+    assert 429 in statuses, statuses
+    limited = client.post(
+        "/api/v1/auth/login",
+        json={"email": "alex@example.com", "password": "not-the-password"},
+    )
+    assert limited.status_code == 429
+    assert limited.json()["error"]["details"]["retry_after_seconds"] > 0
+
+    # Registration keeps its own counter, so failed sign-ins do not lock
+    # somebody out of creating an account.
+    assert (
+        client.post(
+            "/api/v1/auth/register",
+            json={"email": "new@example.com", "password": "correct-horse-9"},
+        ).status_code
+        == 201
+    )
+
+
+def test_a_household_can_export_its_ledger_and_only_its_own(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """Deleting an account is only fair if the data can be taken out first."""
+
+    client, database, settings = api
+    _token(client, database)
+    _seed_review_receipt(database, settings)
+
+    # Household 1's own member exports it. The PIN session is not an account
+    # session, so export is reached with an account that belongs to it.
+    owner = _register(client, "owner@example.com")
+    with database.session() as db:
+        from grocery_home.models import (
+            HouseholdMembership,
+            MembershipRole,
+            MembershipStatus,
+            User,
+        )
+        from sqlalchemy import select as sa_select
+
+        user = db.scalar(sa_select(User).where(User.email == "owner@example.com"))
+        db.add(
+            HouseholdMembership(
+                household_id=1,
+                user_id=user.id,
+                role=MembershipRole.OWNER,
+                status=MembershipStatus.ACTIVE,
+            )
+        )
+        db.commit()
+
+    selected = client.post("/api/v1/households/1/select", headers=_auth(owner))
+    assert selected.status_code == 200, selected.text
+
+    export = client.get("/api/v1/households/1/export", headers=_auth(owner))
+    assert export.status_code == 200, export.text
+    assert export.headers["content-type"].startswith("text/csv")
+    assert "attachment" in export.headers["content-disposition"]
+    body = export.text
+    assert "receipt_id,purchase_date,merchant" in body
+    assert len(body.strip().splitlines()) > 1
+
+    # Someone else's household cannot be exported.
+    intruder = _register(client, "intruder@example.com")
+    _create_household(client, intruder, "Somewhere else")
+    denied = client.get("/api/v1/households/1/export", headers=_auth(intruder))
+    assert denied.status_code == 404
+

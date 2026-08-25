@@ -1,0 +1,17 @@
+# Copy to android/key.properties and fill in. That file is git-ignored: this
+# repository is public and a signing key must never be committed to it.
+#
+# Create a keystore you own and keep a backup — losing it means you can never
+# publish an update to the same Play listing again:
+#
+#   keytool -genkey -v -keystore receipts-hub-upload.jks \
+#     -keyalg RSA -keysize 4096 -validity 10000 -alias upload
+#
+storeFile=../receipts-hub-upload.jks
+storePassword=
+keyAlias=upload
+keyPassword=
+
+# The domain serving /.well-known/assetlinks.json for App Links. Until this is
+# a real domain you control, verification fails and links open in a browser.
+appLinkHost=receipts.aacu-church.org

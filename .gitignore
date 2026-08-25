@@ -33,6 +33,11 @@ receipts - grocery home/*.jpg
 receipts - grocery home/*.jpeg
 receipts - grocery home/*.png
 
+# Signing keys and keystore passwords. This repository is public.
+**/android/key.properties
+**/*.jks
+**/*.keystore
+
 # Machine-local agent settings
 .claude/settings.local.json
 .agents/
