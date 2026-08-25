@@ -41,21 +41,24 @@ The product no longer asks anyone for a host address or a PIN.
 - [x] `collection_id` is derived from line-item categories (`services.receipt_collection`). It was hardcoded `None`, so every live receipt was permanently "Unfiled" and Collections could never populate.
 - [x] The edit draft is a `Notifier` that reads its seed once, so a background refresh no longer discards edits in progress.
 
-## NEXT SESSION — section B: flow integrity
+## Section B — flow integrity — 21 August 2026
 
-Flutter only; no backend dependency except where noted.
+- [x] **Route guard and splash.** `createAppRouter` takes a `readState` callback and redirects: public routes stay open, a signed-out deep link goes to `/welcome`, a restoring session holds on `/splash`, and an account with no household resolves to `/household`. Passing no `readState` disables the guard, which is what widget tests want.
+- [x] **Household approval works.** `lib/features/household/household_members_screen.dart` lists members and pending requests with the requester's email and the role they would get, and wires approve / decline / remove to the service. Reachable from Account's new **People** row. The old screen was orphaned and rendered a hardcoded `['Alex Morgan']`, so requests could not be approved by anyone.
+- [x] **`lib/ui_ux_revision/` is gone.** The join screen moved to `lib/features/household/household_join_screen.dart` and lost its `Mvp` prefix; the mock admin screen was deleted.
+- [x] **Unsaved-changes guard.** `PopScope` on the review screen asks before discarding a corrected receipt, on the back button and on system back. A blank manual draft is still discarded silently, which is right.
+- [x] **Capture tray.** Thumbnails of each captured page, drag to reorder, per-page remove with a 44px target and an Undo that puts the page back where it was. Replaces a "Page N" chip whose only affordance was a sub-44px "Clear" that wiped everything with no undo.
+- [x] **"Open settings" opens settings** via `permission_handler`, falling back to a camera retry if the platform refuses. Pinned to `permission_handler: 11.3.1` — 14.0.0 needs a newer Gradle Kotlin DSL than this project uses.
+- [x] **Ledger at scale.** `receiptListProvider` pages from the service (30 at a time, infinite scroll), debounces search by 350 ms, filters by merchant and attention **server-side**, drops stale responses by generation, and shows one count instead of two that disagreed.
+- [x] **Preferences persist.** `shared_preferences` is actually used now: colourway, dark mode, keep-photos and larger-text survive a restart. `largerText` scales text via `MediaQuery.textScaler`, clamped on top of the platform setting rather than replacing it — it used to be a switch that changed nothing.
+- [x] **Offline is detected.** `connectivity_plus` is wired; losing the network shows the banner and regaining it refreshes. It only ever reports *definitely* offline, since an interface being up does not mean the service is reachable.
+- [x] **One currency formatter.** `lib/core/format/money.dart` is the single implementation; `app_components` re-exports it and the pricing engine delegates to it. The two used to disagree above $1,000 on the same card.
+- [x] **Shopping suggestions render.** The service's predictions were parsed into state and never shown. Accept and dismiss are wired, and the `409 VERSION_CONFLICT` message now appears in the list with a dismiss action instead of being swallowed.
+- [x] **Shell safe-area fixed.** The offline banner moved above the navigation bar; at the top it rendered under the status bar and the inset was applied twice because every child screen nests its own `Scaffold` and `AppBar`.
+- [x] **Nav highlighting fixed.** `AppShell` maps `/collections`, `/rivals` and `/items` to Insights and reports *no* selection on Account and household routes, instead of lighting Home for everything it did not recognise.
+- [x] Verified: `flutter analyze` clean, **51 Flutter tests pass** (3 new: signed-out deep link, restoring session, and Account reaching approvals).
 
-- [ ] **Route guard and splash.** `createAppRouter` has no `redirect`, so a deep link skips both auth and the household step. `AppState.onboardingComplete` is written four times and read nowhere. Add a splash while `restoreSession()` resolves, and route signed-in-but-no-household to `/household`. Note: the developer PIN path sets `connected` directly and must keep working.
-- [ ] **Household approval screen.** `/household/members` is still orphaned with a hardcoded `['Alex Morgan']`, so nobody can approve the join requests the app now sends. Promote `lib/ui_ux_revision/` to `lib/features/household/`, drop the `Mvp` class prefixes, and wire approve/decline/revoke with the requester's identity and requested role. Needs the endpoints in section C.
-- [ ] **Unsaved-changes guards.** Zero `PopScope` in `lib/`. Editing a receipt and pressing back discards silently; the line-item sheet is drag-dismissible with the same effect.
-- [ ] **Capture tray.** No page thumbnails, no reorder, no per-page remove — only a "Page N" chip with a sub-44px "Clear" that wipes every page with no undo. `AppController.removeCapturePage` and `moveCapturePage` already exist and are unused. Add a pre-upload confirmation.
-- [ ] **"Open settings" doesn't open settings** (`capture_screens.dart`, `_CameraDeniedPanel`) — it just retries the camera. Needs `permission_handler`.
-- [ ] **Receipts list at scale.** No pagination, so receipt 51+ is invisible; `listReceipts(limit, offset)` already supports it. Debounce the search (every keystroke writes global state), add a clear affordance, pass `attentionOnly` to the service instead of filtering 50 client-side rows, and reconcile the two counts that disagree.
-- [ ] **Nothing persists.** `shared_preferences` and `connectivity_plus` are in `pubspec.yaml` and never imported: theme, colourway and prefs reset every launch, and offline is never detected. Either apply `largerText` via `MediaQuery.textScaler` in `lib/app.dart` or delete the switch.
-- [ ] **One currency formatter.** `formatCents` (grouped, intl) and `money` (`price_comparison.dart:106`, ungrouped) render on the same card and disagree above $1,000.
-- [ ] **Shopping suggestions** are fetched into `AppState.suggestions` and never rendered; `acceptSuggestion`/`dismissSuggestion` exist. Show the `409 VERSION_CONFLICT` recovery copy too.
-- [ ] Fix the shell safe-area double inset: the offline banner sits under the status bar and each child `Scaffold`+`AppBar` adds a second inset (`app_shell.dart`).
-- [ ] Surface `isLoading`/`failureMessage` on the remaining screens and finish `RefreshIndicator` coverage.
+**Not verified on device.** The emulator's package service is wedged (`pm` returns `Broken pipe`) after running out of storage earlier, so section B has not been seen running. Cold boot or wipe the AVD before the next device check — this is separate from the physical-device run below.
 
 ## NEXT SESSION — section C: hosted identity, tenancy, comparison
 
