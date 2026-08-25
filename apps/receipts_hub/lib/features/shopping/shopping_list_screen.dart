@@ -56,6 +56,12 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     final entries = ref.watch(
       appControllerProvider.select((value) => value.shopping),
     );
+    final suggestions = ref.watch(
+      appControllerProvider.select((value) => value.suggestions),
+    );
+    final failure = ref.watch(
+      appControllerProvider.select((value) => value.failureMessage),
+    );
     final toBuy = entries.where((item) => !item.isPickedUp).toList();
     final picked = entries.where((item) => item.isPickedUp).toList();
 
@@ -67,6 +73,46 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
         36,
       ),
       children: <Widget>[
+        // What another device did, in the service's words. A stale edit
+        // returns 409 and the list reloads; saying nothing made that look
+        // like the app had simply discarded the change.
+        if (failure != null) ...<Widget>[
+          LedgerCard(
+            key: const Key('shopping-conflict'),
+            color: context.appColors.warnBg,
+            borderColor: Colors.transparent,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(
+                  Icons.sync_problem_outlined,
+                  color: context.appColors.warnFg,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    failure,
+                    style: AppText.bodyS.copyWith(
+                      color: context.appColors.warnFg,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Dismiss',
+                  onPressed: ref
+                      .read(appControllerProvider.notifier)
+                      .clearFailure,
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: context.appColors.warnFg,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         Row(
           children: <Widget>[
             Expanded(
@@ -107,6 +153,53 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
               children: toBuy.map((item) => _ShoppingRow(item: item)).toList(),
             ),
           ),
+        // The service predicts what is probably due. This was parsed into
+        // state and never rendered, so the feature was invisible.
+        if (suggestions.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 26),
+          SectionLabel('Probably due · ${suggestions.length}'),
+          const SizedBox(height: 8),
+          for (final suggestion in suggestions)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: LedgerCard(
+                key: ValueKey<String>('suggestion-${suggestion.key}'),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(suggestion.description, style: AppText.body),
+                          const SizedBox(height: 3),
+                          Text(
+                            suggestion.dueLabel,
+                            style: AppText.caption.copyWith(
+                              color: context.appColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Not needed',
+                      onPressed: () => ref
+                          .read(appControllerProvider.notifier)
+                          .dismissSuggestion(suggestion.key),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: 'Add to list',
+                      onPressed: () => ref
+                          .read(appControllerProvider.notifier)
+                          .acceptSuggestion(suggestion.key),
+                      icon: const Icon(Icons.add_rounded),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
         if (picked.isNotEmpty) ...<Widget>[
           const SizedBox(height: 26),
           SectionLabel('Picked up · ${picked.length}'),

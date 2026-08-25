@@ -135,19 +135,37 @@ class AccountScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const SectionLabel('Receipts'),
+          const SectionLabel('Receipts and reading'),
           const SizedBox(height: 8),
           LedgerCard(
             padding: EdgeInsets.zero,
-            child: SwitchListTile.adaptive(
-              secondary: const Icon(Icons.photo_outlined),
-              title: const Text('Keep receipt photos'),
-              subtitle: const Text(
-                'Keeps the photograph with each filed receipt so you can '
-                'check it later.',
-              ),
-              value: app.keepPhotos,
-              onChanged: ref.read(appControllerProvider.notifier).setKeepPhotos,
+            child: Column(
+              children: <Widget>[
+                SwitchListTile.adaptive(
+                  secondary: const Icon(Icons.photo_outlined),
+                  title: const Text('Keep receipt photos'),
+                  subtitle: const Text(
+                    'Keeps the photograph with each filed receipt so you can '
+                    'check it later.',
+                  ),
+                  value: app.keepPhotos,
+                  onChanged: ref
+                      .read(appControllerProvider.notifier)
+                      .setKeepPhotos,
+                ),
+                const Divider(height: 1),
+                SwitchListTile.adaptive(
+                  secondary: const Icon(Icons.text_fields_rounded),
+                  title: const Text('Larger text'),
+                  subtitle: const Text(
+                    'Increases text size throughout the app.',
+                  ),
+                  value: theme.largerText,
+                  onChanged: ref
+                      .read(themeControllerProvider.notifier)
+                      .setLargerText,
+                ),
+              ],
             ),
           ),
         ],

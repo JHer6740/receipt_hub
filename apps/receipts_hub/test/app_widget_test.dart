@@ -138,7 +138,7 @@ void main() {
       'No such shop',
     );
     await tester.pump();
-    expect(find.text('No receipts found'), findsOneWidget);
+    expect(find.text('No receipts match'), findsOneWidget);
   });
 
   testWidgets('review marks uncertain fields and names what filing needs', (

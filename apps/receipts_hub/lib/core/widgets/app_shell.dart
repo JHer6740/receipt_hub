@@ -3,6 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../design/app_theme.dart';
 
+/// The five-destination shell.
+///
+/// The offline banner sits directly above the navigation bar rather than at the
+/// top of the body. At the top it rendered under the status bar, and because
+/// every child screen nests its own `Scaffold` and `AppBar`, the inset was
+/// applied twice whenever the banner was visible.
 class AppShell extends StatelessWidget {
   const AppShell({
     required this.location,
@@ -15,25 +21,66 @@ class AppShell extends StatelessWidget {
   final Widget child;
   final bool offline;
 
-  int get _selectedIndex {
-    if (location.startsWith('/receipts')) {
-      return 1;
+  static const _destinations = <_ShellDestination>[
+    _ShellDestination(
+      path: '/home',
+      label: 'Home',
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+    ),
+    _ShellDestination(
+      path: '/receipts',
+      label: 'Receipts',
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long_rounded,
+      // Receipt detail and review live under this destination.
+      prefixes: <String>['/receipts'],
+    ),
+    _ShellDestination(
+      path: '/capture',
+      label: 'Scan',
+      icon: Icons.document_scanner_outlined,
+      selectedIcon: Icons.document_scanner_rounded,
+      pushes: true,
+    ),
+    _ShellDestination(
+      path: '/insights',
+      label: 'Insights',
+      icon: Icons.insights_outlined,
+      selectedIcon: Icons.insights_rounded,
+      // Comparison and collections are reached from Insights and Home, so they
+      // keep the Insights tab lit rather than falling through to Home.
+      prefixes: <String>['/insights', '/rivals', '/items', '/collections'],
+    ),
+    _ShellDestination(
+      path: '/list',
+      label: 'List',
+      icon: Icons.checklist_rounded,
+      selectedIcon: Icons.playlist_add_check_rounded,
+    ),
+  ];
+
+  /// Which destination owns the current location.
+  ///
+  /// Returns null when nothing does — Account and the household screens live in
+  /// the shell but are not destinations, and highlighting Home while a person
+  /// is on Account was simply wrong.
+  int? get _selectedIndex {
+    for (var index = 0; index < _destinations.length; index += 1) {
+      if (_destinations[index].matches(location)) return index;
     }
-    if (location.startsWith('/insights') ||
-        location.startsWith('/rivals') ||
-        location.startsWith('/items')) {
-      return 3;
-    }
-    if (location.startsWith('/list')) {
-      return 4;
-    }
-    return 0;
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final selected = _selectedIndex;
+
     return Scaffold(
-      body: Column(
+      body: child,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (offline)
             Semantics(
@@ -42,74 +89,78 @@ class AppShell extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 5,
+                  vertical: 6,
                 ),
-                color: context.appColors.warnBg,
+                color: colors.warnBg,
                 child: Text(
-                  'Offline · queued',
+                  'Offline · changes will sync when you reconnect',
                   textAlign: TextAlign.center,
                   style: AppText.captionS.copyWith(
-                    color: context.appColors.warnFg,
+                    color: colors.warnFg,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
-          Expanded(child: child),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: colors.divider)),
+            ),
+            child: NavigationBar(
+              // NavigationBar needs a valid index, so a non-destination route
+              // parks on Home visually while nothing is reported as selected
+              // to assistive technology.
+              selectedIndex: selected ?? 0,
+              onDestinationSelected: (index) {
+                final destination = _destinations[index];
+                if (destination.pushes) {
+                  context.push(destination.path);
+                } else {
+                  context.go(destination.path);
+                }
+              },
+              destinations: <NavigationDestination>[
+                for (var index = 0; index < _destinations.length; index += 1)
+                  NavigationDestination(
+                    icon: Icon(_destinations[index].icon),
+                    selectedIcon: Icon(_destinations[index].selectedIcon),
+                    label: _destinations[index].label,
+                    tooltip: _destinations[index].label,
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: context.appColors.divider)),
-        ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) {
-            switch (index) {
-              case 0:
-                context.go('/home');
-              case 1:
-                context.go('/receipts');
-              case 2:
-                context.push('/capture');
-              case 3:
-                context.go('/insights');
-              case 4:
-                context.go('/list');
-            }
-          },
-          destinations: <NavigationDestination>[
-            const NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long_rounded),
-              label: 'Receipts',
-            ),
-            NavigationDestination(
-              icon: Semantics(
-                label: 'Scan a receipt',
-                child: Icon(Icons.document_scanner_outlined),
-              ),
-              selectedIcon: Icon(Icons.document_scanner_rounded),
-              label: 'Scan',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.insights_outlined),
-              selectedIcon: Icon(Icons.insights_rounded),
-              label: 'Insights',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.checklist_rounded),
-              selectedIcon: Icon(Icons.playlist_add_check_rounded),
-              label: 'List',
-            ),
-          ],
-        ),
-      ),
     );
+  }
+}
+
+class _ShellDestination {
+  const _ShellDestination({
+    required this.path,
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+    this.prefixes,
+    this.pushes = false,
+  });
+
+  final String path;
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+
+  /// Extra location prefixes this destination owns.
+  final List<String>? prefixes;
+
+  /// Whether selecting it pushes a full-screen route instead of switching tab.
+  final bool pushes;
+
+  bool matches(String location) {
+    for (final prefix in prefixes ?? <String>[path]) {
+      if (location == prefix || location.startsWith('$prefix/')) return true;
+    }
+    return location == path;
   }
 }

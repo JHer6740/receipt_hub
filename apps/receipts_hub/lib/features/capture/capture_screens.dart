@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/design/app_components.dart';
 import '../../core/design/app_theme.dart';
@@ -262,7 +264,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
 
     final capture = ref.watch(
       appControllerProvider.select(
-        (state) => (pages: state.capturePages, denied: state.cameraDenied),
+        (state) => (
+          pages: state.capturePages,
+          maxPages: state.maxCapturePages,
+          denied: state.cameraDenied,
+        ),
       ),
     );
     final torchEnabled = ref.watch(_torchEnabledProvider);
@@ -354,7 +360,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                               top: 16,
                               child: Semantics(
                                 liveRegion: true,
-                                label: '${capture.pages} pages captured',
+                                label:
+                                    '${capture.pages} of '
+                                    '${capture.maxPages} pages captured',
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 14,
@@ -371,45 +379,13 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                                       color: cameraInk.withValues(alpha: .24),
                                     ),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Text(
-                                        'Page ${capture.pages}',
-                                        style: AppText.captionS.copyWith(
-                                          color: cameraInk,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      InkWell(
-                                        onTap: ref
-                                            .read(
-                                              appControllerProvider.notifier,
-                                            )
-                                            .clearCapture,
-                                        borderRadius: BorderRadius.circular(
-                                          AppRadii.chip,
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 3,
-                                          ),
-                                          child: Text(
-                                            'Clear',
-                                            style: AppText.captionS.copyWith(
-                                              color: cameraInk.withValues(
-                                                alpha: .78,
-                                              ),
-                                              decoration:
-                                                  TextDecoration.underline,
-                                              decorationColor: cameraInk,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    'Page ${capture.pages} of '
+                                    '${capture.maxPages}',
+                                    style: AppText.captionS.copyWith(
+                                      color: cameraInk,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -418,6 +394,14 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                       ),
                     ),
             ),
+            if (!capture.denied && capture.pages > 0)
+              _CapturePageTray(
+                paths: ref.watch(
+                  appControllerProvider.select(
+                    (state) => state.capturePagePaths,
+                  ),
+                ),
+              ),
             if (!capture.denied)
               Padding(
                 padding: const EdgeInsets.fromLTRB(28, 20, 28, 24),
@@ -591,7 +575,6 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
       doneCount: doneCount,
     );
   }
-
 }
 
 class _ProcessingLayout extends StatelessWidget {
@@ -869,7 +852,12 @@ class _CameraDeniedPanel extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: onOpenSettings,
+            // Actually opens Android's app settings. This used to just retry
+            // the camera, so a permanently denied permission was a dead end.
+            onPressed: () async {
+              final opened = await openAppSettings();
+              if (!opened) onOpenSettings();
+            },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF92A273),
               foregroundColor: const Color(0xFF221D16),
@@ -1025,4 +1013,146 @@ class _ReceiptGuidePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// The pages captured so far, in the order they will be sent.
+///
+/// Replaces a "Page N" chip whose only affordance was a sub-44px "Clear" link
+/// that wiped every page at once with no undo. Page order is receipt order, so
+/// it has to be visible and changeable before anything is uploaded.
+class _CapturePageTray extends ConsumerWidget {
+  const _CapturePageTray({required this.paths});
+
+  final List<String> paths;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const ink = Color(0xFFF2EAD9);
+    final controller = ref.read(appControllerProvider.notifier);
+
+    void remove(int index) {
+      final removed = paths[index];
+      controller.removeCapturePage(index);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Page ${index + 1} removed'),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            action: SnackBarAction(
+              label: 'Undo',
+              // Back where it was, not appended to the end.
+              onPressed: () {
+                controller.addCapturePage(removed);
+                final last = ref.read(appControllerProvider).capturePages - 1;
+                if (last > index) controller.moveCapturePage(last, index);
+              },
+            ),
+          ),
+        );
+    }
+
+    return SizedBox(
+      height: 108,
+      child: ReorderableListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        buildDefaultDragHandles: false,
+        itemCount: paths.length,
+        onReorder: (from, to) =>
+            controller.moveCapturePage(from, to > from ? to - 1 : to),
+        itemBuilder: (context, index) {
+          final page = index + 1;
+          return ReorderableDragStartListener(
+            key: ValueKey<String>(paths[index]),
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Semantics(
+                label: 'Receipt page $page of ${paths.length}',
+                child: Stack(
+                  children: <Widget>[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        width: 62,
+                        height: 86,
+                        color: const Color(0xFF2B251C),
+                        child: Image.file(
+                          File(paths[index]),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stack) => const Center(
+                            child: Icon(
+                              Icons.receipt_long_outlined,
+                              color: ink,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Semantics(
+                        button: true,
+                        label: 'Remove page $page',
+                        child: InkWell(
+                          onTap: () => remove(index),
+                          customBorder: const CircleBorder(),
+                          // A 44px target over a 62px thumbnail: destructive
+                          // actions do not get a smaller hit area than the
+                          // rest of the app.
+                          child: const SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Align(
+                              alignment: Alignment.topRight,
+                              child: Padding(
+                                padding: EdgeInsets.all(3),
+                                child: CircleAvatar(
+                                  radius: 11,
+                                  backgroundColor: Color(0xFF221D16),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 14,
+                                    color: ink,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 4,
+                      bottom: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF221D16).withValues(alpha: .8),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$page',
+                          style: AppText.captionS.copyWith(
+                            color: ink,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

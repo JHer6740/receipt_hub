@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/preferences_store.dart';
 import '../data/receipts_repository.dart';
 import '../design/app_theme.dart';
 import '../models/models.dart';
@@ -12,25 +13,69 @@ class ThemePreference {
   const ThemePreference({
     this.colorway = AppColorway.sage,
     this.mode = ThemeMode.light,
+    this.largerText = false,
   });
 
   final AppColorway colorway;
   final ThemeMode mode;
 
-  ThemePreference copyWith({AppColorway? colorway, ThemeMode? mode}) =>
-      ThemePreference(
-        colorway: colorway ?? this.colorway,
-        mode: mode ?? this.mode,
-      );
+  /// Bumps the app's own text scale, on top of whatever the OS asks for.
+  final bool largerText;
+
+  ThemePreference copyWith({
+    AppColorway? colorway,
+    ThemeMode? mode,
+    bool? largerText,
+  }) => ThemePreference(
+    colorway: colorway ?? this.colorway,
+    mode: mode ?? this.mode,
+    largerText: largerText ?? this.largerText,
+  );
 }
 
+/// Appearance choices, remembered across launches.
 class ThemeController extends Notifier<ThemePreference> {
   @override
-  ThemePreference build() => const ThemePreference();
+  ThemePreference build() {
+    // Load in the background: the first frame uses the defaults rather than
+    // blocking on disk, then settles once the stored values arrive.
+    Future<void>(() async {
+      final stored = await ref.read(preferencesStoreProvider).load();
+      state = ThemePreference(
+        colorway: stored.colorway,
+        mode: stored.darkMode ? ThemeMode.dark : ThemeMode.light,
+        largerText: stored.largerText,
+      );
+    });
+    return const ThemePreference();
+  }
 
-  void setColorway(AppColorway value) =>
-      state = state.copyWith(colorway: value);
-  void setMode(ThemeMode value) => state = state.copyWith(mode: value);
+  void setColorway(AppColorway value) {
+    state = state.copyWith(colorway: value);
+    _persist();
+  }
+
+  void setMode(ThemeMode value) {
+    state = state.copyWith(mode: value);
+    _persist();
+  }
+
+  void setLargerText(bool value) {
+    state = state.copyWith(largerText: value);
+    _persist();
+  }
+
+  void _persist() {
+    final keepPhotos = ref.read(appControllerProvider).keepPhotos;
+    ref.read(preferencesStoreProvider).save(
+      StoredPreferences(
+        colorway: state.colorway,
+        darkMode: state.mode == ThemeMode.dark,
+        keepPhotos: keepPhotos,
+        largerText: state.largerText,
+      ),
+    );
+  }
 }
 
 final themeControllerProvider =
@@ -565,8 +610,18 @@ class AppController extends Notifier<AppState> {
 
   void setOffline(bool value) => state = state.copyWith(offline: value);
   void setSharing(bool value) => state = state.copyWith(sharingEnabled: value);
-  void setKeepPhotos(bool value) => state = state.copyWith(keepPhotos: value);
-  void setLargerText(bool value) => state = state.copyWith(largerText: value);
+  void setKeepPhotos(bool value) {
+    state = state.copyWith(keepPhotos: value);
+    final theme = ref.read(themeControllerProvider);
+    ref.read(preferencesStoreProvider).save(
+      StoredPreferences(
+        colorway: theme.colorway,
+        darkMode: theme.mode == ThemeMode.dark,
+        keepPhotos: value,
+        largerText: theme.largerText,
+      ),
+    );
+  }
   void setSearch(String value) => state = state.copyWith(searchQuery: value);
   void setAttentionOnly(bool value) =>
       state = state.copyWith(attentionOnly: value);

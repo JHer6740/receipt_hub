@@ -1,16 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' as intl;
 
+import '../format/money.dart';
 import 'app_theme.dart';
 
-final intl.NumberFormat _currency = intl.NumberFormat.currency(
-  locale: 'en_AU',
-  symbol: r'$',
-);
-
-String formatCents(num cents) => _currency.format(cents / 100);
+// Re-exported so the many screens that already import this file for
+// `formatCents` keep working, while there is only one implementation.
+export '../format/money.dart' show formatCents;
 
 class LedgerCard extends StatelessWidget {
   const LedgerCard({

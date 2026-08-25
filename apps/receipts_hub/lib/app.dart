@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/data/connectivity_watcher.dart';
 import 'core/design/app_theme.dart';
 import 'core/routing/app_router.dart';
 import 'core/state/app_state.dart';
@@ -22,16 +23,23 @@ class ReceiptsHubApp extends ConsumerStatefulWidget {
 }
 
 class _ReceiptsHubAppState extends ConsumerState<ReceiptsHubApp> {
-  late final GoRouter _router = widget.router ?? createAppRouter();
+  late final GoRouter _router =
+      widget.router ??
+      createAppRouter(
+        initialLocation: widget.restoreSession ? '/splash' : '/welcome',
+        readState: () => ref.read(appControllerProvider),
+      );
 
   @override
   void initState() {
     super.initState();
     if (!widget.restoreSession) return;
-    // A household that has already paired this phone should land on live data
-    // without being asked for the PIN again.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(appControllerProvider.notifier).restoreSession();
+      if (!mounted) return;
+      // Watch the network for real, not just when a request fails.
+      ref.read(connectivityWatcherProvider);
+      // A device that has signed in before goes straight to its household.
+      ref.read(appControllerProvider.notifier).restoreSession();
     });
   }
 
@@ -53,6 +61,20 @@ class _ReceiptsHubAppState extends ConsumerState<ReceiptsHubApp> {
       darkTheme: buildTheme(dark, Brightness.dark),
       themeMode: preference.mode,
       routerConfig: _router,
+      builder: (context, child) {
+        // "Larger text" was a switch that changed nothing. It now scales on
+        // top of the platform setting rather than replacing it, so someone
+        // already using large system text is not scaled back down.
+        final platform = MediaQuery.textScalerOf(context);
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: preference.largerText
+                ? platform.clamp(minScaleFactor: 1.15)
+                : platform,
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

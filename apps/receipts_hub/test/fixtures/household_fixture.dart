@@ -11,6 +11,7 @@ import 'package:receipts_hub/core/network/api_models.dart' as wire;
 import 'package:receipts_hub/core/state/app_state.dart';
 import 'package:receipts_hub/features/compare/comparison_data.dart';
 import 'package:receipts_hub/features/developer/host_connection_screen.dart';
+import 'package:receipts_hub/features/receipts/receipt_list_controller.dart';
 
 abstract final class HouseholdFixture {
   /// A fixed clock so assertions do not drift with the calendar.
@@ -387,6 +388,40 @@ class _SeededAppController extends AppController {
   AppState build() => _seed;
 }
 
+/// Stands in for the paged ledger endpoint.
+///
+/// The list screen asks the service for a page and lets the service filter, so
+/// tests supply a double rather than having the widget filter a local list.
+class _SeededReceiptListController extends ReceiptListController {
+  @override
+  ReceiptListState build() => ReceiptListState(
+    items: HouseholdFixture.receipts,
+    total: HouseholdFixture.receipts.length,
+  );
+
+  @override
+  void search(String value) {
+    final query = value.trim().toLowerCase();
+    final matches = HouseholdFixture.receipts
+        .where(
+          (receipt) =>
+              query.isEmpty || receipt.merchant.toLowerCase().contains(query),
+        )
+        .toList();
+    state = state.copyWith(
+      query: value,
+      items: matches,
+      total: matches.length,
+    );
+  }
+
+  @override
+  Future<void> refresh() async {}
+
+  @override
+  Future<void> loadMore() async {}
+}
+
 /// Provider overrides that put a loaded household behind the UI.
 List<Override> householdOverrides({AppState? state}) => <Override>[
   appControllerProvider.overrideWith(
@@ -395,6 +430,7 @@ List<Override> householdOverrides({AppState? state}) => <Override>[
   comparisonBasketProvider.overrideWithValue(
     HouseholdFixture.comparisonBasket,
   ),
+  receiptListProvider.overrideWith(_SeededReceiptListController.new),
   // Baselines and assertions describe the shipped surface, so debug-only
   // developer affordances stay out of them.
   developerToolsProvider.overrideWithValue(false),

@@ -1,6 +1,7 @@
 // Evidence-safe item and basket price comparisons.
 
 import 'package:receipts_hub/core/models/models.dart';
+import '../format/money.dart';
 
 enum CompareScope { yourStores, everywhere }
 
@@ -103,7 +104,11 @@ class ComparisonResult {
   bool get isAvailable => eligibility.canCompare;
 }
 
-String money(num cents) => '\$${(cents / 100).toStringAsFixed(2)}';
+/// Money, as the rest of the app renders it.
+///
+/// This used to build its own string without grouping separators, so a
+/// comparison card could show `$1234.56` beside `$1,234.56`.
+String money(num cents) => formatCents(cents);
 
 class PriceComparator {
   PriceComparator({

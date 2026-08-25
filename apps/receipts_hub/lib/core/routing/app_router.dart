@@ -10,6 +10,7 @@ import '../../features/household/household_choice_screen.dart';
 import '../../features/compare/comparison_screens.dart';
 import '../../features/ledger/ledger_screens.dart';
 import '../../features/onboarding/onboarding_screens.dart';
+import '../../features/onboarding/splash_screen.dart';
 import '../../features/receipts/receipt_screens.dart';
 import '../../features/shopping/shopping_list_screen.dart';
 import '../state/app_state.dart';
@@ -29,9 +30,57 @@ String _origin(GoRouterState state, String fallback) {
   };
 }
 
-GoRouter createAppRouter({String initialLocation = '/welcome'}) {
+/// Locations anyone may open, signed in or not.
+const _publicRoutes = <String>{
+  '/splash',
+  '/welcome',
+  '/create-account',
+  '/sign-in',
+  '/developer/connection',
+};
+
+/// Locations that need an account but not yet a household.
+const _accountRoutes = <String>{'/household', '/household/join'};
+
+/// Build the router.
+///
+/// [readState] lets the router see the session. When it is null the guard is
+/// disabled, which is what widget tests want: they deep-link straight to the
+/// surface under test and assert its own empty and error states.
+GoRouter createAppRouter({
+  String initialLocation = '/welcome',
+  AppState Function()? readState,
+}) {
   return GoRouter(
     initialLocation: initialLocation,
+    redirect: readState == null
+        ? null
+        : (context, state) {
+            final app = readState();
+            final location = state.uri.path;
+
+            if (_publicRoutes.contains(location)) {
+              // Nothing to do here but leave once there is a session.
+              if (location == '/welcome' && app.connected) return '/home';
+              return null;
+            }
+
+            // Still resolving a stored session: hold rather than bounce
+            // someone who is in fact signed in out to the front door.
+            if (app.connection == HubConnection.connecting) return '/splash';
+
+            final signedIn =
+                app.connection != HubConnection.signedOut &&
+                app.connection != HubConnection.authFailed;
+            if (!signedIn) return '/welcome';
+
+            // An account without a household has nowhere to file a receipt,
+            // so every household-scoped location resolves to the chooser.
+            if (!app.connected && !_accountRoutes.contains(location)) {
+              return '/household';
+            }
+            return null;
+          },
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('Page not found')),
       body: Center(
@@ -43,6 +92,13 @@ GoRouter createAppRouter({String initialLocation = '/welcome'}) {
       ),
     ),
     routes: <RouteBase>[
+      // Shown while a stored session is being restored, so a returning user
+      // never sees the first-run screen flash past.
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/welcome',
         name: 'welcome',

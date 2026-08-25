@@ -290,13 +290,16 @@ class MobileApi {
     int limit = 50,
     int offset = 0,
     bool attentionOnly = false,
+    String? merchant,
   }) async {
+    final trimmed = merchant?.trim() ?? '';
     final data = await _get(
       '/api/v1/receipts',
       query: <String, dynamic>{
         'limit': limit,
         'offset': offset,
         if (attentionOnly) 'attention_only': true,
+        if (trimmed.isNotEmpty) 'merchant': trimmed,
       },
     );
     return ReceiptPage.fromJson(data);
