@@ -52,6 +52,9 @@ receipts - grocery home/*.png
 # Flutter/Dart
 apps/receipts_hub/.dart_tool/
 apps/receipts_hub/build/
+# Gradle writes reports under android/build, which the rule above misses.
+**/android/build/
+**/android/.gradle/
 apps/receipts_hub/.flutter-plugins
 apps/receipts_hub/.flutter-plugins-dependencies
 apps/receipts_hub/coverage/
