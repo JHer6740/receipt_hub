@@ -65,11 +65,20 @@ flutter build apk --release \
   --dart-define=RECEIPTS_HUB_API_BASE_URL=https://receipts.aacu-church.org \
   --dart-define=RECEIPTS_HUB_PRIVACY_URL=https://receipts.aacu-church.org/privacy \
   --dart-define=RECEIPTS_HUB_TERMS_URL=https://receipts.aacu-church.org/terms \
+  --dart-define=RECEIPTS_HUB_PRIVACY_CHOICES_URL=https://receipts.aacu-church.org/privacy/choices \
+  --dart-define=RECEIPTS_HUB_ACCOUNT_DELETION_URL=https://receipts.aacu-church.org/account/delete \
+  --dart-define=RECEIPTS_HUB_COOKIES_URL=https://receipts.aacu-church.org/cookies \
   --dart-define=RECEIPTS_HUB_SUPPORT_EMAIL=support@aacu-church.org
 ```
 
 The privacy and terms rows stay hidden in Account until those URLs are set, so
 a build without them shows nothing rather than a dead link.
+
+All five pages must exist before submitting to either store. Drafts are in
+[docs/legal](legal/), each with the placeholders it still needs resolved. Apple
+and Google both reject on a missing or unreachable privacy policy, and Google
+additionally requires the account-deletion page to be reachable **without** the
+app installed.
 
 ## 5. App Links
 
