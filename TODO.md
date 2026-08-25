@@ -60,21 +60,29 @@ The product no longer asks anyone for a host address or a PIN.
 
 **Not verified on device.** The emulator's package service is wedged (`pm` returns `Broken pipe`) after running out of storage earlier, so section B has not been seen running. Cold boot or wipe the AVD before the next device check — this is separate from the physical-device run below.
 
-## NEXT SESSION — section C: hosted identity, tenancy, comparison
+## Section C — hosted identity and tenancy — 21 August 2026
 
-The largest block, and it gates the front door: until auth lands, the account
-flow cannot complete and the developer PIN path is the only way in. Security
-surface, so it needs tests, not just routes. Design already written in
-[multi-user architecture](docs/multi-user-architecture.md).
+Accounts, households and multi-tenancy are done. **Comparison evidence and the
+hosting migration are not** — they are the two parts of C still open, listed
+below.
 
-- [ ] `users`, `household_memberships`, `household_join_requests` tables plus migrations; roles `owner`/`admin`/`member`/`viewer`.
-- [ ] Relax `CheckConstraint id = 1` on `households` — it is a singleton today.
-- [ ] `POST /api/v1/auth/register | login | refresh | verify-email | reset-password`, and `DELETE /api/v1/auth/account`.
-- [ ] `GET/POST /api/v1/households`, `POST|DELETE .../join-requests`, `GET .../members`, `POST .../join-requests/{id}/approve|decline`, `DELETE .../members/{id}`. The Flutter client already calls these shapes (`MobileApi.households`, `createHousehold`, `requestToJoinHousehold`, `cancelJoinRequest`).
-- [ ] Scope **every** household read server-side. Add a cross-tenant denial test: a member of household A must not read household B.
-- [ ] HTTPS + Postgres + private object storage for receipt images.
-- [ ] Comparison evidence: merchant metadata, pack sizes, provenance, freshness, confidence, price bands, outliers, multi-retailer coverage. Then `GET /api/v1/rivals`, `/items/{product_key}`, `/shopping/quotes`. `PriceVerdict`, `MerchantComparison` and `RivalsResponse` already exist in `api_schemas.py` with no routes.
-- [ ] Bind `comparisonBasketProvider` to those endpoints. The engine at `lib/core/pricing/price_comparison.dart` and its 16 invariant tests are correct — only the data source changes. The seven invariants must survive.
+- [x] `users` and `household_memberships` tables, roles `owner`/`admin`/`member`/`viewer`, in schema migration 2 (`grocery_home/migrations.py`). Existing data stays with household 1, which becomes an ordinary household.
+- [x] **`households` is no longer a singleton.** SQLite cannot drop a CHECK constraint, so the migration rebuilds the table without `ck_households_singleton` and makes `pin_hash` nullable — only the legacy shared-PIN household has one.
+- [x] **A join request is a `pending` membership**, not a third table. This deviates from [multi-user architecture](docs/multi-user-architecture.md) on purpose: one table means one place decides access, so a request and a membership can never disagree about whether someone is in.
+- [x] `POST /api/v1/auth/register | login | refresh | reset-password`, `DELETE /api/v1/auth/account`. Password hashing is argon2 (`grocery_home/accounts.py`).
+- [x] `GET/POST /api/v1/households`, `POST /households/{ref}/join-requests`, `DELETE .../join-requests/me`, `POST .../select`, `GET .../members`, `POST .../join-requests/{id}/approve|decline`, `DELETE .../members/{id}`.
+- [x] **Tenant scoping.** Receipts, shopping items, upload batches and analytics snapshots all carry `household_id`. Reads are scoped at the query, and a session is authorised by a token that *names* its household — membership is re-checked on every request, so revoking access takes effect immediately even though the holder's token is unchanged.
+- [x] **Cross-tenant denial is tested.** A member of household A gets 404 (not 403) reading, listing or deleting household B's receipt, so the API never confirms that someone else's receipt id exists. Also tested: pending is not access; a requester cannot approve themselves; an owner cannot be removed; deleting an account leaves the household ledger intact; password reset and login do not reveal whether an address is registered.
+- [x] Flutter adopts the household-scoped token — `MobileApi.selectHousehold`, and `createHousehold` picks up the session the service returns. Without this a new household existed but was not readable.
+- [x] Verified: **87 backend tests pass** (was 79), `flutter analyze` clean, **51 Flutter tests pass**.
+
+### Still open in section C
+
+- [ ] **Email delivery.** `POST /auth/reset-password` validates the address and always reports success (so it cannot be used to enumerate accounts), but nothing is sent — `{"delivery": "pending"}`. `verify-email` is deliberately **not** implemented: without delivery nobody could obtain a token, so the endpoint would be a stub that pretends. Wire an email provider, then add both.
+- [ ] **Comparison evidence.** Still needs merchant metadata, pack sizes, provenance, freshness, confidence, price bands, outliers and multi-retailer coverage in the schema, then `GET /api/v1/rivals`, `/items/{product_key}`, `/shopping/quotes`. `PriceVerdict`, `MerchantComparison` and `RivalsResponse` already exist in `api_schemas.py` with no routes. Until then `comparisonBasketProvider` returns no coverage and Rivals/Item render the honest "not enough prices yet" panel.
+- [ ] **Hosting migration: HTTPS, Postgres, private object storage.** Not code I can finish without a target environment — needs a deployment target, connection strings and a bucket. The app already talks to a build-time `RECEIPTS_HUB_API_BASE_URL`, so the client side is ready. Receipt images are still on the host filesystem.
+- [ ] **Rate limiting on the new auth routes.** The PIN throttle (`PinThrottle`) protects `/auth/pin` only; `/auth/register`, `/auth/login` and `/auth/reset-password` are currently unthrottled. Do this before exposing the service publicly.
+- [ ] Ownership transfer. An owner cannot be removed and there is no way to hand ownership over, so a household whose owner leaves cannot be re-administered.
 
 ## NEXT SESSION — section D: commercial release
 
