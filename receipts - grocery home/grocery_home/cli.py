@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from .analytics import refresh_analytics_snapshot
 from .config import ConfigurationError, Settings, sqlite_url
+from . import services
 from .database import create_database, initialize_schema
 from .importer import ImportSummary, LegacyImportError, import_existing
 from .models import Household
@@ -294,12 +295,19 @@ def serve_command(args: argparse.Namespace) -> int:
     database = create_database(settings)
     try:
         initialize_schema(database)
+        # A PIN is only needed by the browser interface. The mobile API
+        # authenticates accounts, so a hosted deployment can legitimately run
+        # without one -- warn rather than refuse to start.
+        #
+        # This used to test whether *any* household row existed, which stopped
+        # being a signal once household 1 became a schema invariant.
         with database.session() as session:
-            configured = session.scalar(select(Household.id).limit(1)) is not None
-        if not configured:
-            raise CommandError(
-                "No household login is configured. Run "
-                ".\\start_grocery_home.ps1 -Setup first."
+            pin_configured = services.pin_configured_household(session) is not None
+        if not pin_configured:
+            print(
+                "No household PIN is set, so the browser interface cannot be "
+                "signed into. The mobile API still works: accounts sign in "
+                "with an email and password."
             )
     finally:
         database.dispose()

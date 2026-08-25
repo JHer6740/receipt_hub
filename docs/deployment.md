@@ -44,6 +44,12 @@ behaviour — do not add an exception to reach the Pi directly by IP.
 
 ## 3. Run the service
 
+> Setting the Pi up from scratch is covered step by step in
+> [the Pi API handover](pi-api-handover.md), including two blockers worth
+> reading first: Raspberry Pi OS ships Python 3.11 and the service needs 3.12+,
+> and OCR speed on ARM is unmeasured. The summary below assumes those are
+> settled.
+
 ```bash
 # On the Pi, from `receipts - grocery home`
 export GROCERY_HOME_SESSION_SECRET="$(openssl rand -base64 48)"   # keep this out of git

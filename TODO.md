@@ -118,6 +118,7 @@ Named because none of it is code I can write:
 ### Still open, and mine to do
 
 - [ ] **Comparison evidence** — the last feature gap. Schema plus `/rivals`, `/items/{key}`, `/shopping/quotes`; Rivals and Item currently show the honest "not enough prices yet" panel.
+- [ ] **Set the Pi up** following [the Pi API handover](docs/pi-api-handover.md). Two blockers first: Raspberry Pi OS (Bookworm) ships Python 3.11 and `pyproject.toml` requires 3.12+, and the `[ocr]` extra needs aarch64 wheels for onnxruntime/rapidocr.
 - [ ] **Measure OCR on the Pi.** ONNX Runtime / RapidOCR on ARM will be much slower than on this machine, and the capture flow polls with a three-minute budget. Time a real receipt end to end before assuming it feels acceptable.
 - [ ] **Postgres and object storage.** SQLite is one writer, and receipt images sit on the Pi's filesystem — a durability concern more than an access one. Revisit when it hurts.
 - [ ] **Ownership transfer.** An owner cannot be removed and ownership cannot be handed over, so a household whose owner leaves cannot be re-administered.
