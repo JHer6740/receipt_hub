@@ -6,7 +6,7 @@ import '../../core/design/app_components.dart';
 import '../../core/design/app_theme.dart';
 import '../../core/models/models.dart';
 import '../../core/state/app_state.dart';
-import '../../core/widgets/household_gate.dart';
+import '../../core/widgets/ledger_scaffold.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -16,34 +16,57 @@ class HomeScreen extends ConsumerWidget {
     final householdName = ref.watch(
       appControllerProvider.select((value) => value.householdName),
     );
-    return Scaffold(
-      key: const Key('home-screen'),
-      appBar: AppBar(
-        title: Text(householdName, overflow: TextOverflow.ellipsis),
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Account',
-            onPressed: () => context.push('/account'),
-            icon: const Icon(Icons.account_circle_outlined),
-          ),
-        ],
-      ),
-      body: HouseholdGate(
-        onSignIn: () => context.go('/welcome'),
-        ready: (context) => RefreshIndicator(
-          onRefresh: ref.read(appControllerProvider.notifier).refresh,
-          child: const _HomeBody(),
-        ),
-      ),
+    // No Account action: Account is a destination in the navigation bar, so an
+    // app-bar shortcut to it would be a second way to the same place — and one
+    // only reachable from this screen.
+    return LedgerScaffold(
+      scaffoldKey: const Key('home-screen'),
+      title: Text(householdName, overflow: TextOverflow.ellipsis),
+      body: (context) => const _HomeBody(),
     );
   }
 }
 
-class _HomeBody extends ConsumerWidget {
+/// How the collections sheet is ordered.
+///
+/// The second option is what the Insights screen used to be. Insights rendered
+/// the same month total, the same delta and the same six-month chart as Home,
+/// and its one distinct contribution was listing collections by how much they
+/// had moved. That is an ordering, not a screen — so it became one here, and
+/// the navigation slot it occupied went to Account, which until now was
+/// reachable only from an icon on this screen.
+enum _CollectionOrder {
+  spend('By spend'),
+  change('By change');
+
+  const _CollectionOrder(this.label);
+
+  final String label;
+}
+
+class _HomeBody extends ConsumerStatefulWidget {
   const _HomeBody();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HomeBody> createState() => _HomeBodyState();
+}
+
+class _HomeBodyState extends ConsumerState<_HomeBody> {
+  _CollectionOrder _order = _CollectionOrder.spend;
+
+  List<SpendCollection> _ordered(List<SpendCollection> source) {
+    final ordered = source.toList();
+    switch (_order) {
+      case _CollectionOrder.spend:
+        ordered.sort((a, b) => b.monthCents.compareTo(a.monthCents));
+      case _CollectionOrder.change:
+        ordered.sort((a, b) => b.deltaPct.abs().compareTo(a.deltaPct.abs()));
+    }
+    return ordered;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final attentionCount = ref.watch(
       appControllerProvider.select((value) => value.attentionCount),
     );
@@ -157,23 +180,29 @@ class _HomeBody extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               const SectionLabel('Collections'),
+              if (figures.collections.length > 1) ...<Widget>[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  children: <Widget>[
+                    for (final order in _CollectionOrder.values)
+                      ChoiceChip(
+                        key: ValueKey<String>('home-order-${order.name}'),
+                        selected: _order == order,
+                        onSelected: (_) => setState(() => _order = order),
+                        label: Text(order.label),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 6),
-              for (
-                var index = 0;
-                index < figures.collections.length;
-                index += 1
-              )
+              for (final entry in _ordered(figures.collections).indexed)
                 _CollectionRow(
-                  key: ValueKey(
-                    'home-collection-${figures.collections[index].key}',
-                  ),
-                  collection: figures.collections[index],
-                  showDivider: index < figures.collections.length - 1,
+                  key: ValueKey('home-collection-${entry.$2.key}'),
+                  collection: entry.$2,
+                  showDivider: entry.$1 < figures.collections.length - 1,
                   onTap: () => context.push(
-                    _collectionLocation(
-                      figures.collections[index].key,
-                      from: 'home',
-                    ),
+                    _collectionLocation(entry.$2.key, from: 'home'),
                   ),
                 ),
               if (figures.collections.isEmpty)
@@ -215,18 +244,10 @@ class CollectionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: () => _back(context)),
-        title: Text(_titleFor(ref)),
-      ),
-      body: HouseholdGate(
-        onSignIn: () => context.go('/welcome'),
-        ready: (context) => RefreshIndicator(
-          onRefresh: ref.read(appControllerProvider.notifier).refresh,
-          child: _CollectionBody(collectionKey: collectionKey),
-        ),
-      ),
+    return LedgerScaffold(
+      leading: BackButton(onPressed: () => _back(context)),
+      title: Text(_titleFor(ref)),
+      body: (context) => _CollectionBody(collectionKey: collectionKey),
     );
   }
 
@@ -375,117 +396,6 @@ class _CollectionBody extends ConsumerWidget {
   }
 }
 
-class InsightsScreen extends ConsumerWidget {
-  const InsightsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      key: const Key('insights-screen'),
-      appBar: AppBar(title: const Text('Insights')),
-      body: HouseholdGate(
-        onSignIn: () => context.go('/welcome'),
-        ready: (context) => RefreshIndicator(
-          onRefresh: ref.read(appControllerProvider.notifier).refresh,
-          child: const _InsightsBody(),
-        ),
-      ),
-    );
-  }
-}
-
-class _InsightsBody extends ConsumerWidget {
-  const _InsightsBody();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final figures = ref.watch(householdFiguresProvider);
-
-    if (figures.collections.isEmpty) {
-      return ListView(
-        children: <Widget>[
-          AppStatePanel(
-            key: const Key('insights-empty'),
-            icon: Icons.insights_outlined,
-            title: 'Nothing to compare yet',
-            message:
-                'File a few receipts and this is where the month-to-month '
-                'picture appears.',
-            actionLabel: 'Scan a receipt',
-            onAction: () => context.push('/capture'),
-          ),
-        ],
-      );
-    }
-
-    final movers = figures.collections.toList()
-      ..sort((a, b) => b.deltaPct.abs().compareTo(a.deltaPct.abs()));
-
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.gutter,
-            8,
-            AppSpacing.gutter,
-            0,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              SectionLabel(
-                'Every collection, ${_monthName(DateTime.now().month)}',
-              ),
-              const SizedBox(height: 8),
-              MoneyText(
-                key: const Key('insights-month-total'),
-                cents: figures.monthTotalCents,
-                style: AppText.displayL,
-                semanticsPrefix: 'All collection total',
-              ),
-              const SizedBox(height: 5),
-              _DeltaLabel(
-                value: figures.monthDeltaPercent,
-                suffix: 'from last month',
-              ),
-              if (figures.monthSeries.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 24),
-                MiniBarChart(
-                  key: const Key('insights-six-month-chart'),
-                  values: figures.monthSeries,
-                  labels: figures.monthLabels,
-                  height: 96,
-                ),
-              ],
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-        RaisedLedgerSheet(
-          key: const Key('insights-ledger-sheet'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const SectionLabel('Moving most'),
-              const SizedBox(height: 6),
-              for (var index = 0; index < movers.length; index += 1)
-                _CollectionRow(
-                  key: ValueKey('insights-mover-${movers[index].key}'),
-                  collection: movers[index],
-                  showDivider: index < movers.length - 1,
-                  onTap: () => context.push(
-                    _collectionLocation(movers[index].key, from: 'insights'),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _CollectionRow extends StatelessWidget {
   const _CollectionRow({
     required this.collection,
@@ -500,42 +410,31 @@ class _CollectionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 64),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            border: showDivider
-                ? Border(bottom: BorderSide(color: context.appColors.divider))
-                : null,
-          ),
-          child: Row(
+    return LedgerRow(
+      onTap: onTap,
+      showDivider: showDivider,
+      child: Row(
+        children: <Widget>[
+          Expanded(child: Text(collection.name, style: AppText.body)),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Expanded(child: Text(collection.name, style: AppText.body)),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  MoneyText(
-                    cents: collection.monthCents,
-                    style: AppText.body.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  _DeltaLabel(value: collection.deltaPct, compact: true),
-                ],
+              MoneyText(
+                cents: collection.monthCents,
+                style: AppText.body.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: context.appColors.textSecondary,
-              ),
+              const SizedBox(height: 2),
+              _DeltaLabel(value: collection.deltaPct, compact: true),
             ],
           ),
-        ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: context.appColors.textSecondary,
+          ),
+        ],
       ),
     );
   }
@@ -555,61 +454,49 @@ class _ReceiptRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 72),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            border: showDivider
-                ? Border(bottom: BorderSide(color: context.appColors.divider))
-                : null,
-          ),
-          child: Row(
-            children: <Widget>[
-              MerchantMark(name: receipt.merchant, size: 40),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return LedgerRow(
+      onTap: onTap,
+      showDivider: showDivider,
+      child: Row(
+        children: <Widget>[
+          MerchantMark(name: receipt.merchant, size: 40),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  receipt.merchant,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body,
+                ),
+                const SizedBox(height: 4),
+                Row(
                   children: <Widget>[
                     Text(
-                      receipt.merchant,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.body,
+                      _shortDate(receipt.purchasedAt),
+                      style: AppText.caption.copyWith(
+                        color: context.appColors.textSecondary,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: <Widget>[
-                        Text(
-                          _shortDate(receipt.purchasedAt),
-                          style: AppText.caption.copyWith(
-                            color: context.appColors.textSecondary,
-                          ),
-                        ),
-                        if (receipt.status !=
-                            ReceiptStatus.confirmed) ...<Widget>[
-                          const SizedBox(width: 8),
-                          StatusPill(_hubStatus(receipt.status)),
-                        ],
-                      ],
-                    ),
+                    if (receipt.status != ReceiptStatus.confirmed) ...<Widget>[
+                      const SizedBox(width: 8),
+                      StatusPill(_hubStatus(receipt.status)),
+                    ],
                   ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              MoneyText(cents: receipt.totalCents, style: AppText.body),
-              const SizedBox(width: 2),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: context.appColors.textSecondary,
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 10),
+          MoneyText(cents: receipt.totalCents, style: AppText.body),
+          const SizedBox(width: 2),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: context.appColors.textSecondary,
+          ),
+        ],
       ),
     );
   }

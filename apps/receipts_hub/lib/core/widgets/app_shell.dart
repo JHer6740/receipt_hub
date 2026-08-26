@@ -27,6 +27,9 @@ class AppShell extends StatelessWidget {
       label: 'Home',
       icon: Icons.home_outlined,
       selectedIcon: Icons.home_rounded,
+      // Collections and the comparison surfaces are reached from Home, so
+      // they keep this tab lit rather than reporting nothing as selected.
+      prefixes: <String>['/home', '/collections', '/rivals', '/items'],
     ),
     _ShellDestination(
       path: '/receipts',
@@ -44,27 +47,27 @@ class AppShell extends StatelessWidget {
       pushes: true,
     ),
     _ShellDestination(
-      path: '/insights',
-      label: 'Insights',
-      icon: Icons.insights_outlined,
-      selectedIcon: Icons.insights_rounded,
-      // Comparison and collections are reached from Insights and Home, so they
-      // keep the Insights tab lit rather than falling through to Home.
-      prefixes: <String>['/insights', '/rivals', '/items', '/collections'],
-    ),
-    _ShellDestination(
       path: '/list',
       label: 'List',
       icon: Icons.checklist_rounded,
       selectedIcon: Icons.playlist_add_check_rounded,
     ),
+    // Account was reachable only from an icon on Home, so from Receipts, Scan
+    // or List there was no way to it at all — and everything a person needs to
+    // act on their own data lives there: export, deletion, the household's
+    // people, privacy. Insights vacated this slot by being folded into Home.
+    _ShellDestination(
+      path: '/account',
+      label: 'Account',
+      icon: Icons.account_circle_outlined,
+      selectedIcon: Icons.account_circle_rounded,
+    ),
   ];
 
   /// Which destination owns the current location.
   ///
-  /// Returns null when nothing does — Account and the household screens live in
-  /// the shell but are not destinations, and highlighting Home while a person
-  /// is on Account was simply wrong.
+  /// Returns null when nothing does, rather than falling through to Home:
+  /// highlighting Home while a person is somewhere else was simply wrong.
   int? get _selectedIndex {
     for (var index = 0; index < _destinations.length; index += 1) {
       if (_destinations[index].matches(location)) return index;

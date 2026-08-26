@@ -24,9 +24,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Search merchants'), findsOneWidget);
 
-    await tester.tap(find.text('Insights').last);
+    await tester.tap(find.text('Account').last);
     await tester.pumpAndSettle();
-    expect(find.text('EVERY COLLECTION, AUGUST'), findsOneWidget);
+    expect(find.byKey(const Key('account-connection')), findsOneWidget);
 
     await tester.tap(find.text('List').last);
     await tester.pumpAndSettle();

@@ -3,7 +3,7 @@
 This document defines the UI and UX preparation required to move Receipts Hub from a verified frontend/live-API build into a usable MVP release. It is focused on the Android-first capture-to-ledger journey and deliberately excludes later hosted features such as public price sharing, advanced retailer coverage, and offline mutation queues.
 
 ## MVP product promise
-A new user should be able to install the app, connect to the host, authenticate, capture a receipt, understand what the app is doing, recover from a failure, correct uncertain OCR, file the receipt, and find the result in Home, Receipts, Insights, and List.
+A new user should be able to install the app, create an account, join or start a household, capture a receipt, understand what the app is doing, recover from a failure, correct uncertain OCR, file the receipt, and find the result in Home, Receipts, and List.
 
 The experience should feel:
 
@@ -147,7 +147,7 @@ The primary action should change with state:
 - `File receipt` when the merchant and total gate passes
 - `Saved with missing date` when the receipt is valid but excluded from dated analytics
 - `Already filed` for duplicates
-After filing, show a confirmation that names where the receipt can be found: Home, Receipts, and Insights when dated.
+After filing, show a confirmation that names where the receipt can be found: Home and Receipts, and Home's month figures when dated.
 
 ## Navigation and information architecture
 Keep the five-destination shell already implemented. The MVP hierarchy should remain shallow:
@@ -157,7 +157,7 @@ Household switcher → active household and pending access status
 Home
 Receipts → receipt detail → photo zoom
 Capture → processing → review
-Collections / Insights
+Collections
 List
 Account → household members, join requests, connection status, theme, sign out, help
 ```
@@ -168,7 +168,7 @@ Rules:
 - Do not hide essential capture or review actions behind overflow menus.
 - Keep Home focused on current totals, recent receipts, and the next useful action.
 - Receipts is the source of truth for the complete ledger and attention states.
-- Insights is explanatory; it must not imply precision beyond the available data.
+- Home's month figures and collections are explanatory; they must not imply precision beyond the available data. (The separate Insights screen was folded into Home on 26 August 2026: it restated Home's total, delta and chart, and its one distinct part — collections ordered by movement — is an ordering on Home now.)
 - List must clearly distinguish active, completed, dismissed, and suggested items.
 - Account must show the active household, membership role, pending join requests or approvals, service connection state, last successful sync, and sign-out.
 - Owners/admins must have an accessible member-management screen with pending requests, requester identity, requested household, requested role, approval, decline, and revoke actions.
@@ -308,7 +308,7 @@ Before signing off the UI/UX:
 - [ ] Review clearly identifies uncertain values and the filing gate.
 - [ ] Missing-date receipts explain their analytics treatment.
 - [ ] Duplicate receipts explain the outcome without data loss.
-- [ ] Home, Receipts, Insights, and List reflect a newly filed receipt.
+- [ ] Home, Receipts, and List reflect a newly filed receipt.
 - [ ] Auth expiry safely returns the user to sign-in without losing a draft.
 - [ ] Empty, loading, error, and ready states are implemented for every live screen.
 - [ ] TalkBack, large text, contrast, reduced motion, and small-width checks pass.

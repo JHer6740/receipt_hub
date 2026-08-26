@@ -12,6 +12,11 @@
 **/uploads/
 **/managed/
 
+# Golden-comparison output. Written by `flutter test` whenever a golden fails,
+# and regenerated on the next failure — 24 of these were committed while the
+# Welcome goldens were red and then left behind after the cause was fixed.
+**/test/failures/
+
 # Local test scratch. These hold copies of real receipt PDFs, so they must
 # never be committed — this repository is public.
 **/.pytest_tmp*/
@@ -20,7 +25,9 @@
 
 # Analysis outputs derived from real household receipts (purchase association
 # rules, forecasts, spend statistics). Regenerate locally with the scripts in
-# the backend root rather than publishing them.
+# the backend root rather than publishing them. Settled 26 August 2026: these
+# stay out of a public repository permanently, not until someone gets round to
+# it.
 receipts - grocery home/analysis/
 
 # Parsed receipt exports: 752 real line items with prices and quantities.

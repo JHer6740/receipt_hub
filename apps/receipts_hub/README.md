@@ -5,32 +5,43 @@ ledger, shopping list, and evidence-based merchant comparison.
 
 ## Current status
 
-The app is a verified, navigable **frontend demo**. It includes first run,
-connection, Android camera/gallery capture, processing states, receipt review,
-Home, Receipts, Collections, Insights, Rivals, Item comparison, List, and
-Account. Riverpod state and the price-comparison engine are functional, but all
-ledger content comes from in-memory `DemoData` and resets when the process
-restarts.
+A **hosted, multi-tenant client** talking to the real `/api/v1` service. Every
+figure on screen comes from that service: `DemoData` is deleted, and the sample
+ledger that used to back these screens now lives in `test/fixtures/` where only
+tests can reach it. An unreachable service reports that it is unreachable
+rather than showing sample money.
 
-The connection form currently validates an address and PIN locally; it does not
-contact the Python host. `MobileApi` defines the future session boundary, but the
-required `/api/v1` backend is pending. Camera and gallery acquisition are real
-on Android; upload, OCR, server persistence, authenticated images, and live
-analytics are simulated or not yet wired.
+The front door is an account — create one or sign in — followed by choosing or
+starting a household, because receipts are filed into a household rather than
+into an account. Nobody is asked for a host address or a PIN: the service is
+build-time configuration (`--dart-define=RECEIPTS_HUB_API_BASE_URL`). The old
+address-and-PIN screen survives only as a debug-only developer tool, compiled
+out of release builds.
+
+Verified on a physical device against the live service: account creation,
+household creation, session restore across a cold start, and the ledger's empty
+states. Capture through OCR to filing is the part still being walked on real
+hardware — see the repository's `TODO.md` for exactly where that stands.
+
+Five destinations: Home, Receipts, Scan, List, Account. Home carries the month
+figures and collections; a separate Insights screen was folded into it on
+26 August 2026, since it restated Home's total, delta and chart and its one
+distinct part — collections ordered by movement — is an ordering on Home now.
 
 ## Included frontend features
 
 - Material 3 interface with Sage, Clay, and Olive colorways in light and dark.
 - Noto Sans assets, receipt-ledger components, tabular prices, and accessible
   navigation targets.
-- GoRouter navigation with a five-destination app shell and origin-aware detail
-  routes.
-- Riverpod-managed demo receipts, shopping items, capture state, sharing, and
-  theme preferences.
+- GoRouter navigation with a five-destination app shell, a session guard, and
+  origin-aware detail routes.
+- Riverpod-managed receipts, shopping items, capture state and theme
+  preferences, all loaded from the service and persisted across launches.
 - Android camera/gallery page acquisition with one-to-five ordered pages,
   permission recovery, torch control, and gallery fallback.
-- Receipt search, review/edit previews, comparison screens, shopping-list
-  interactions, offline preview, and loading/failure states.
+- Receipt search and paging, review and edit against server detail, comparison
+  screens, shopping-list interactions, and loading/empty/error/ready states on
+  every server-backed screen.
 - Evidence-safe item and basket comparisons with unit tests for weak data,
   provenance, mixed packs, consent, and incomplete coverage.
 

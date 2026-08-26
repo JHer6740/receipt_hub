@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/design/app_components.dart';
 import '../../core/design/app_theme.dart';
 import '../../core/state/app_state.dart';
-import '../../core/widgets/household_gate.dart';
+import '../../core/widgets/ledger_scaffold.dart';
 
 class ShoppingListScreen extends ConsumerStatefulWidget {
   const ShoppingListScreen({super.key});
@@ -40,16 +39,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('List')),
-      body: HouseholdGate(
-        onSignIn: () => context.go('/welcome'),
-        ready: (context) => RefreshIndicator(
-          onRefresh: ref.read(appControllerProvider.notifier).refresh,
-          child: _body(context),
-        ),
-      ),
-    );
+    return LedgerScaffold(title: const Text('List'), body: _body);
   }
 
   Widget _body(BuildContext context) {
