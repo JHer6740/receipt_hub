@@ -5,6 +5,9 @@ one: it adds accounts and memberships, stamps every household-owned row with
 the household it belongs to, and drops the constraint that pinned
 ``households`` to a single row.
 
+Version 3 finishes that job for uploaded files, whose canonical-hash
+uniqueness was still global.
+
 Existing data belongs to household 1, which becomes a normal household.
 """
 
@@ -176,4 +179,59 @@ def _rebuild_households_without_singleton(connection: Connection) -> None:
     )
 
 
-__all__ = ["add_accounts_and_tenancy"]
+@register_migration(3)
+def scope_upload_files_to_a_household(connection: Connection) -> None:
+    """Make a file's canonical-hash uniqueness per household.
+
+    Version 2 stamped ``upload_batches`` but not ``upload_files``, whose unique
+    index on ``content_sha256`` spans the whole database. Two households
+    photographing the same receipt therefore could not both file it: the second
+    was recorded as a duplicate of the first household's file, and the
+    duplicate path copies that household's merchant and totals into the
+    second's ledger.
+    """
+
+    if not _has_column(connection, "upload_files", "household_id"):
+        # No REFERENCES clause, matching version 2: SQLite refuses to add a
+        # column with a foreign key unless its default is NULL, and this
+        # column cannot be nullable. A database created from the models does
+        # carry the constraint; a migrated one relies on the writes above it.
+        connection.execute(
+            text(
+                "ALTER TABLE upload_files "
+                "ADD COLUMN household_id INTEGER NOT NULL DEFAULT 1"
+            )
+        )
+
+    # Each file belongs to whichever household uploaded its batch.
+    connection.execute(
+        text(
+            """
+            UPDATE upload_files
+               SET household_id = COALESCE(
+                       (SELECT b.household_id
+                          FROM upload_batches AS b
+                         WHERE b.id = upload_files.batch_id),
+                       1
+                   )
+            """
+        )
+    )
+
+    connection.execute(text("DROP INDEX IF EXISTS uq_upload_files_canonical_hash"))
+    connection.execute(
+        text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_upload_files_canonical_hash "
+            "ON upload_files (household_id, content_sha256) "
+            "WHERE duplicate_of_id IS NULL"
+        )
+    )
+    connection.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_upload_files_household_id "
+            "ON upload_files (household_id)"
+        )
+    )
+
+
+__all__ = ["add_accounts_and_tenancy", "scope_upload_files_to_a_household"]

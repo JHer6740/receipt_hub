@@ -228,19 +228,31 @@ def validate_and_store_uploads(
     return store_validated_uploads(validate_upload_batch(uploads), storage_dir)
 
 
-def find_exact_duplicate(session: object, sha256: str) -> object | None:
-    """Find an existing upload by hash without coupling callers to query syntax."""
+def find_exact_duplicate(
+    session: object,
+    sha256: str,
+    *,
+    household_id: int | None = None,
+) -> object | None:
+    """Find an existing upload by hash without coupling callers to query syntax.
+
+    Scoped to one household when given. A hash matched across households links
+    this household's receipt to another household's row, and the duplicate path
+    copies that row's merchant and totals — so an unscoped match is a way for
+    one tenant's figures to surface inside another tenant's ledger.
+    """
 
     from sqlalchemy import select
 
     from grocery_home.models import UploadFile
 
-    return session.scalar(
-        select(UploadFile).where(
-            UploadFile.content_sha256 == sha256,
-            UploadFile.duplicate_of_id.is_(None),
-        )
+    query = select(UploadFile).where(
+        UploadFile.content_sha256 == sha256,
+        UploadFile.duplicate_of_id.is_(None),
     )
+    if household_id is not None:
+        query = query.where(UploadFile.household_id == household_id)
+    return session.scalar(query)
 
 
 def extract_stored_receipt(
@@ -306,6 +318,16 @@ def extract_stored_receipt(
     return parsed
 
 
+def _batch_household_id(batch: object) -> int:
+    """Which household owns an upload batch, defaulting to the first one.
+
+    Rows that predate tenancy carry no value, and for those the original single
+    household is the right answer rather than "no household".
+    """
+
+    return getattr(batch, "household_id", None) or 1
+
+
 def transaction_identity(parsed: ParsedReceiptData) -> tuple[object, ...] | None:
     """Stable semantic identity used after file-hash deduplication."""
 
@@ -325,8 +347,13 @@ def transaction_identity(parsed: ParsedReceiptData) -> tuple[object, ...] | None
 
 
 def find_transaction_duplicate(
-    session: object, parsed: ParsedReceiptData
+    session: object,
+    parsed: ParsedReceiptData,
+    *,
+    household_id: int | None = None,
 ) -> object | None:
+    """Find the same transaction already filed, within one household."""
+
     from sqlalchemy import func, select
 
     from grocery_home.models import Receipt
@@ -335,15 +362,16 @@ def find_transaction_duplicate(
     if identity is None:
         return None
     merchant, purchase_date, transaction_number, total_cents = identity
-    return session.scalar(
-        select(Receipt).where(
-            func.lower(Receipt.merchant_name) == merchant,
-            Receipt.purchase_date == purchase_date,
-            func.lower(Receipt.transaction_number) == transaction_number,
-            Receipt.total_cents == total_cents,
-            Receipt.duplicate_of_id.is_(None),
-        )
+    query = select(Receipt).where(
+        func.lower(Receipt.merchant_name) == merchant,
+        Receipt.purchase_date == purchase_date,
+        func.lower(Receipt.transaction_number) == transaction_number,
+        Receipt.total_cents == total_cents,
+        Receipt.duplicate_of_id.is_(None),
     )
+    if household_id is not None:
+        query = query.where(Receipt.household_id == household_id)
+    return session.scalar(query)
 
 
 def create_upload_batch(
@@ -351,11 +379,18 @@ def create_upload_batch(
     uploads: Sequence[StoredUpload],
     *,
     source: str = "web",
+    household_id: int = 1,
 ) -> object:
     """Persist a validated logical receipt and its privately stored files.
 
     Exact hash matches are linked before the first flush so the database's
     canonical-hash uniqueness rule remains race-safe and auditable.
+
+    The batch has to carry the household that uploaded it. Left on the default,
+    every upload landed in household 1: the reading screen polled a batch its
+    own household could not see and reported the batch as not found, and the
+    receipt that came out of it was filed into a household the person who
+    photographed it is not a member of.
     """
 
     if not uploads:
@@ -371,6 +406,7 @@ def create_upload_batch(
     source_value = UploadSource(source)
     batch = UploadBatch(
         id=new_id(),
+        household_id=household_id,
         status=ProcessingStatus.QUEUED,
         source=source_value,
         total_files=len(uploads),
@@ -381,9 +417,12 @@ def create_upload_batch(
     for ordinal, stored in enumerate(uploads, start=1):
         duplicate = seen_in_batch.get(stored.sha256)
         if duplicate is None:
-            duplicate = find_exact_duplicate(session, stored.sha256)
+            duplicate = find_exact_duplicate(
+                session, stored.sha256, household_id=household_id
+            )
         upload_file = UploadFile(
             id=new_id(),
+            household_id=household_id,
             batch_id=batch.id,
             ordinal=ordinal,
             original_filename=stored.original_filename,
@@ -443,7 +482,10 @@ def persist_parsed_receipt(
     if existing_for_upload is not None:
         return existing_for_upload
 
-    duplicate = find_transaction_duplicate(session, parsed)
+    household_id = _batch_household_id(batch)
+    duplicate = find_transaction_duplicate(
+        session, parsed, household_id=household_id
+    )
     merchant_key = _merchant_key(parsed.merchant)
     natural_key = make_receipt_natural_key(
         merchant=merchant_key,
@@ -465,6 +507,7 @@ def persist_parsed_receipt(
     )
     receipt = Receipt(
         id=new_id(),
+        household_id=household_id,
         upload_file_id=primary.id,
         merchant_key=merchant_key,
         merchant_name=parsed.merchant,
@@ -607,6 +650,7 @@ def process_upload_batch(
             .where(
                 UploadFile.id.in_([entry.duplicate_of_id for entry in files]),
                 Receipt.duplicate_of_id.is_(None),
+                Receipt.household_id == _batch_household_id(batch),
             )
         )
         if canonical is not None:
@@ -673,6 +717,7 @@ def _persist_exact_duplicate(
 
     duplicate = Receipt(
         id=new_id(),
+        household_id=_batch_household_id(batch),
         upload_file_id=primary_upload.id,
         merchant_key=canonical.merchant_key,
         merchant_name=canonical.merchant_name,

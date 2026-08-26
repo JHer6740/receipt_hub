@@ -1445,7 +1445,7 @@ async def create_upload(
 ) -> dict[str, Any]:
     """Accept one to five ordered receipt photos and queue them for reading."""
 
-    _household, trace = auth
+    household, trace = auth
     settings = get_settings_for(request)
 
     if not files:
@@ -1468,7 +1468,7 @@ async def create_upload(
         stored = await asyncio.to_thread(
             validate_and_store_uploads, files, settings.receipt_dir
         )
-        batch = create_upload_batch(session, stored)
+        batch = create_upload_batch(session, stored, household_id=household.id)
         enqueue_job(
             session,
             "receipt_extract",
@@ -1552,10 +1552,15 @@ def retry_upload(
     client can fall back to manual entry against the same images.
     """
 
-    _household, trace = auth
+    household, trace = auth
+    # Scoped: a batch id is not a capability. Without the household filter any
+    # signed-in member of any household could re-queue anyone else's upload.
     batch = session.scalar(
         select(UploadBatch)
-        .where(UploadBatch.id == batch_id)
+        .where(
+            UploadBatch.id == batch_id,
+            UploadBatch.household_id == household.id,
+        )
         .options(selectinload(UploadBatch.files))
     )
     if batch is None:

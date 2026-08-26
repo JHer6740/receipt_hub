@@ -1068,3 +1068,110 @@ def test_a_household_can_export_its_ledger_and_only_its_own(
     denied = client.get("/api/v1/households/1/export", headers=_auth(intruder))
     assert denied.status_code == 404
 
+
+def test_an_upload_belongs_to_the_household_that_made_it(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """The reading screen has to be able to poll the batch it just created.
+
+    Upload wrote the batch with the default household while the status route
+    read it scoped to the caller's, so a capture on a real account reported
+    "Upload batch ... not found" on the phone, and the receipt that came out of
+    it was filed into a household the person who photographed it is not in.
+    The existing upload tests missed this because they authenticate with the
+    household PIN, which is household 1 — the same value the default supplied.
+    """
+
+    client, database, _settings = api
+    account = _register(client, "alex@example.com")
+    household_id, token = _create_household(client, account, "The Alex household")
+
+    created = client.post(
+        "/api/v1/uploads",
+        headers=_auth(token),
+        files=[("files", ("page-1.png", _png_bytes(), "image/png"))],
+    )
+    assert created.status_code == 201, created.text
+    batch_id = created.json()["data"]["batch_id"]
+
+    progress = client.get(f"/api/v1/uploads/{batch_id}", headers=_auth(token))
+    assert progress.status_code == 200, progress.text
+    assert progress.json()["data"]["batch_id"] == batch_id
+
+    with database.session() as session:
+        batch = session.get(UploadBatch, batch_id)
+        assert batch is not None
+        assert batch.household_id == household_id
+
+
+def test_another_household_cannot_read_or_requeue_an_upload(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """A batch id is not a capability."""
+
+    client, _database, _settings = api
+    alex_account = _register(client, "alex@example.com")
+    _alex_id, alex = _create_household(client, alex_account, "The Alex household")
+    sam_account = _register(client, "sam@example.com")
+    _sam_id, sam = _create_household(client, sam_account, "The Sam household")
+
+    created = client.post(
+        "/api/v1/uploads",
+        headers=_auth(alex),
+        files=[("files", ("page-1.png", _png_bytes(), "image/png"))],
+    )
+    assert created.status_code == 201, created.text
+    batch_id = created.json()["data"]["batch_id"]
+
+    # 404 rather than 403: answering differently would confirm the batch exists.
+    denied = client.get(f"/api/v1/uploads/{batch_id}", headers=_auth(sam))
+    assert denied.status_code == 404
+    denied_retry = client.post(
+        f"/api/v1/uploads/{batch_id}/retry", headers=_auth(sam)
+    )
+    assert denied_retry.status_code == 404
+
+    # The household that made it still can.
+    assert (
+        client.get(f"/api/v1/uploads/{batch_id}", headers=_auth(alex)).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"/api/v1/uploads/{batch_id}/retry", headers=_auth(alex)
+        ).status_code
+        == 200
+    )
+
+
+def test_the_same_photo_in_two_households_stays_separate(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    """File-hash deduplication must not reach across households.
+
+    An unscoped hash match links this household's upload to another's receipt,
+    and the duplicate path copies that receipt's merchant and totals — so one
+    tenant's figures would appear inside another tenant's ledger.
+    """
+
+    client, database, _settings = api
+    photo = _png_bytes()
+    alex_account = _register(client, "alex@example.com")
+    alex_id, alex = _create_household(client, alex_account, "The Alex household")
+    sam_account = _register(client, "sam@example.com")
+    sam_id, sam = _create_household(client, sam_account, "The Sam household")
+
+    for token in (alex, sam):
+        response = client.post(
+            "/api/v1/uploads",
+            headers=_auth(token),
+            files=[("files", ("page-1.png", photo, "image/png"))],
+        )
+        assert response.status_code == 201, response.text
+
+    with database.session() as session:
+        uploads = session.scalars(select(UploadFile)).all()
+        assert len(uploads) == 2
+        assert [entry.duplicate_of_id for entry in uploads] == [None, None]
+        batches = session.scalars(select(UploadBatch)).all()
+        assert {batch.household_id for batch in batches} == {alex_id, sam_id}

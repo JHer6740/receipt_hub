@@ -9,7 +9,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from starlette.responses import Response
 
-from grocery_home.config import ConfigurationError, Settings
+from grocery_home.config import ConfigurationError, Settings, sqlite_url
 from grocery_home.database import (
     CURRENT_SCHEMA_VERSION,
     create_database,
@@ -331,3 +331,168 @@ def test_pin_throttle_persists_lockout_and_success_clears_it() -> None:
         assert not session_matches_household(session_data, household)
 
     database.dispose()
+
+
+def test_upgrading_a_version_2_database_scopes_upload_files(tmp_path: Path) -> None:
+    """The upgrade path a live database actually takes, not just a fresh one.
+
+    A version 2 database has no ``upload_files.household_id`` and a canonical
+    hash unique across every household. This drops the column and index to put
+    a database back in that shape, then upgrades it: the column has to be
+    added even with foreign keys enabled, backfilled from each file's batch,
+    and the uniqueness re-made per household.
+    """
+
+    database = create_database(
+        database_url=sqlite_url(tmp_path / "upgrade-test.sqlite3")
+    )
+    try:
+        assert initialize_schema(database) == CURRENT_SCHEMA_VERSION
+
+        # Put the table back to what version 2 left behind. The column cannot
+        # simply be dropped, because the current schema has a foreign key on
+        # it, so this rebuilds upload_files without it.
+        with database.engine.begin() as connection:
+            connection.execute(text("PRAGMA foreign_keys=OFF"))
+            connection.execute(text("DROP TABLE upload_files"))
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE upload_files (
+                        id VARCHAR(32) NOT NULL PRIMARY KEY,
+                        batch_id VARCHAR(32) NOT NULL
+                            REFERENCES upload_batches(id) ON DELETE CASCADE,
+                        ordinal INTEGER NOT NULL DEFAULT 0,
+                        original_filename VARCHAR(255) NOT NULL,
+                        storage_key VARCHAR(255) NOT NULL UNIQUE,
+                        media_type VARCHAR(100) NOT NULL,
+                        file_size INTEGER NOT NULL,
+                        content_sha256 VARCHAR(64) NOT NULL,
+                        page_count INTEGER NULL,
+                        status VARCHAR(20) NOT NULL DEFAULT 'queued',
+                        duplicate_of_id VARCHAR(32) NULL
+                            REFERENCES upload_files(id) ON DELETE RESTRICT,
+                        error_code VARCHAR(80) NULL,
+                        error_message TEXT NULL,
+                        created_at TIMESTAMP NOT NULL,
+                        updated_at TIMESTAMP NOT NULL,
+                        CONSTRAINT uq_upload_files_batch_ordinal
+                            UNIQUE (batch_id, ordinal)
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE UNIQUE INDEX uq_upload_files_canonical_hash "
+                    "ON upload_files (content_sha256) "
+                    "WHERE duplicate_of_id IS NULL"
+                )
+            )
+            connection.execute(
+                text("DELETE FROM schema_migrations WHERE version = 3")
+            )
+
+        # Two households, each with a batch holding one file. Their hashes
+        # differ here only because the old index would not allow otherwise.
+        with database.session() as session:
+            session.add(Household(id=2, display_name="The second household"))
+            session.flush()
+            for index, household_id in enumerate((1, 2), start=1):
+                batch = UploadBatch(
+                    household_id=household_id,
+                    status=ProcessingStatus.QUEUED,
+                    total_files=1,
+                    processed_files=0,
+                )
+                session.add(batch)
+                session.flush()
+                session.execute(
+                    text(
+                        """
+                        INSERT INTO upload_files (
+                            id, batch_id, ordinal, original_filename,
+                            storage_key, media_type, file_size,
+                            content_sha256, status, created_at, updated_at
+                        ) VALUES (
+                            :id, :batch_id, 1, :name, :key, 'image/png', 100,
+                            :digest, 'queued', :now, :now
+                        )
+                        """
+                    ),
+                    {
+                        "id": f"{index:032d}",
+                        "batch_id": batch.id,
+                        "name": f"page-{index}.png",
+                        "key": f"stored-{index}.png",
+                        "digest": f"{index:064d}",
+                        "now": datetime.now(UTC),
+                    },
+                )
+            session.commit()
+
+        assert schema_version(database) == 2
+
+        assert initialize_schema(database) == CURRENT_SCHEMA_VERSION
+
+        with database.session() as session:
+            owners = {
+                entry.id: entry.household_id
+                for entry in session.scalars(select(UploadFile)).all()
+            }
+            assert owners == {f"{1:032d}": 1, f"{2:032d}": 2}
+
+            # The same hash is now allowed once per household, and still only
+            # once within one.
+            for household_id, file_id in ((1, "a" * 32), (2, "b" * 32)):
+                batch = UploadBatch(
+                    household_id=household_id,
+                    status=ProcessingStatus.QUEUED,
+                    total_files=1,
+                    processed_files=0,
+                )
+                session.add(batch)
+                session.flush()
+                session.add(
+                    UploadFile(
+                        id=file_id,
+                        household_id=household_id,
+                        batch_id=batch.id,
+                        ordinal=1,
+                        original_filename="shared.png",
+                        storage_key=f"shared-{household_id}.png",
+                        media_type="image/png",
+                        file_size=100,
+                        content_sha256="f" * 64,
+                        status=ProcessingStatus.QUEUED,
+                    )
+                )
+            session.commit()
+
+            duplicate_batch = UploadBatch(
+                household_id=1,
+                status=ProcessingStatus.QUEUED,
+                total_files=1,
+                processed_files=0,
+            )
+            session.add(duplicate_batch)
+            session.flush()
+            session.add(
+                UploadFile(
+                    id="c" * 32,
+                    household_id=1,
+                    batch_id=duplicate_batch.id,
+                    ordinal=1,
+                    original_filename="shared-again.png",
+                    storage_key="shared-again.png",
+                    media_type="image/png",
+                    file_size=100,
+                    content_sha256="f" * 64,
+                    status=ProcessingStatus.QUEUED,
+                )
+            )
+            with pytest.raises(IntegrityError):
+                session.flush()
+            session.rollback()
+    finally:
+        database.dispose()

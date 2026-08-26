@@ -16,7 +16,7 @@ from sqlalchemy.pool import StaticPool
 from .config import Settings, get_settings
 
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 class Base(DeclarativeBase):

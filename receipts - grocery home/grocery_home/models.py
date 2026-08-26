@@ -351,8 +351,14 @@ class UploadFile(TimestampMixin, Base):
     __tablename__ = "upload_files"
     __table_args__ = (
         UniqueConstraint("batch_id", "ordinal", name="uq_upload_files_batch_ordinal"),
+        # Per household, not global. A file hash unique across the whole
+        # database means two households can never photograph the same receipt:
+        # either the second upload is silently filed as a duplicate of the
+        # first household's — copying its merchant and totals across the
+        # tenant boundary — or, once that match is scoped, the insert fails.
         Index(
             "uq_upload_files_canonical_hash",
+            "household_id",
             "content_sha256",
             unique=True,
             sqlite_where=text("duplicate_of_id IS NULL"),
@@ -361,6 +367,11 @@ class UploadFile(TimestampMixin, Base):
     )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+        default=1,
+    )
     batch_id: Mapped[str] = mapped_column(
         ForeignKey("upload_batches.id", ondelete="CASCADE"),
         nullable=False,
