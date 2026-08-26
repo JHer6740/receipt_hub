@@ -89,13 +89,75 @@ below.
 - [ ] **Flaky backend tests under load.** `test_a_tampered_token_is_rejected` and `test_api_pin_auth_issues_and_validates_signed_session` failed intermittently while a Gradle build and an emulator were competing for the machine, then passed on three consecutive clean full runs. Both are timing-sensitive around the PIN throttle. Not reproduced in isolation; worth pinning down rather than assuming it is only load.
 - [ ] **Emulator package service is wedged.** `adb shell pm ...` returns `Broken pipe` on `emulator-5554` after it ran out of storage. Sections B and C have therefore never been seen running on a device. Cold boot or wipe the AVD (`flutter emulators --launch Medium_Phone_API_36.1`, then Wipe Data from the AVD manager) before the next device check.
 
+## Physical-device run — 26 August 2026
+
+Galaxy S24 Ultra (`SM_S928B`) against the live service at
+`https://receipts.aacu-church.org`. Signup, household creation and the ledger
+now work end to end on real hardware. Five bugs here were invisible to 54
+passing Flutter tests and 89 passing backend tests, because every one of them
+lived in a seam the tests stubbed.
+
+- [x] **Account creation could never succeed.** `SessionEnvelope.fromJson` read
+  `session_token` and a nested `household`, which is the shape of the
+  developer PIN route. The account routes return `token` and a flat
+  `household_name`, so `json['session_token'] as String` threw on null —
+  *after* the service had created the account. A cast error is not an
+  `ApiFailure`, so nothing caught it and the button spun forever with no
+  message. Every test stubbed the PIN shape, so nothing noticed. `fromJson`
+  now reads both shapes, and a payload with no token becomes a typed
+  `MALFORMED_SESSION` failure instead of a crash.
+- [x] **A stored host address outranked the build's own service.** A device
+  that had once been pointed at a development host kept posting there, so
+  signup timed out against a machine that was no longer listening, and in a
+  release build there is no screen to correct it. The configured service now
+  wins wherever no address can be entered by hand, and a stale entry is
+  deleted on sight. The product path no longer writes an address at all, so a
+  stored one always means somebody chose it.
+- [x] **Authentication no longer spins on an unexpected error.** `_withSession`
+  and the auth screen catch everything, not just `ApiFailure`, and report it.
+- [x] **Uploads were filed into the wrong household.** `POST /uploads` wrote
+  the batch on the default `household_id` of 1 while `GET /uploads/{id}` read
+  it scoped to the caller, so a capture on a real account reported "Upload
+  batch … not found" and the receipt landed in a household the person is not
+  a member of. Batch, file and receipt now all carry the uploading household.
+  The existing upload tests missed it because they authenticate with the
+  household PIN, which *is* household 1.
+- [x] **Cross-tenant holes closed with it.** Retry took a batch id with no
+  household filter, so any member of any household could re-queue anyone's
+  upload. File-hash and transaction deduplication both matched across
+  households — and the duplicate path copies the matched receipt's merchant
+  and totals, so one tenant's figures could appear in another's ledger.
+  Migration 3 makes `upload_files` carry a `household_id` and moves the
+  canonical-hash uniqueness from global to per-household; a global one meant
+  two households could never file the same receipt at all.
+- [x] Verified: `flutter analyze` clean, **61 Flutter tests pass** (was 54),
+  **93 backend tests pass** (was 89). New coverage: the account-route session
+  payload, a malformed session, host resolution with and without override, an
+  upload's ownership, cross-tenant read/retry denial, the same photo in two
+  households, and the real version 2 to 3 upgrade path.
+
+### Still to do on the device
+
+- [ ] **Capture → OCR → review → file has not completed on the phone.** The
+  first attempt hit the household-scoping bug above; the service needs the fix
+  deployed before retrying. Back up the database first — migration 3 alters
+  `upload_files`.
+- [ ] **The batch uploaded before the fix stays invisible** to the household
+  that made it (it belongs to household 1). Photograph the receipt again
+  rather than trying to recover it.
+- [ ] **OCR timing on the Pi is still unmeasured** — the open item from
+  Section D, and the reason the capture flow's three-minute poll budget is
+  still a guess.
+- [ ] TalkBack and large text on a 320–360 dp device, per the script in
+  [the MVP UI/UX plan](docs/mvp-ui-ux-plan.md).
+
 ## Section D — commercial release — 21 August 2026
 
 Deployment target decided: the existing Raspberry Pi, over HTTPS through
 Cloudflare on a subdomain of `aacu-church.org`. Written up in
 [deployment](docs/deployment.md).
 
-- [x] **HTTPS only.** `usesCleartextTraffic="true"` is gone, replaced by `network_security_config.xml` that refuses cleartext. A **debug-only** override allows plain HTTP to `10.0.2.2`, `localhost` and `127.0.0.1` so the developer host screen can still reach a local backend — and nothing else, so a debug build cannot accidentally talk to a real service in the clear.
+- [x] **HTTPS only.** `usesCleartextTraffic="true"` is gone, replaced by `network_security_config.xml` that refuses cleartext. A **debug-only** override permits plain HTTP so the developer host screen can reach a local backend. It is deliberately not an allow-list of hosts: a physical phone needs the development machine's LAN address, which changes, and a network-security-config cannot express a range — an allow-list simply blocked that screen. Release builds have neither the permission nor the screen.
 - [x] **Release signing wired.** `android/app/build.gradle.kts` reads `android/key.properties` (git-ignored, with `.example` committed). Without it a release build logs a warning and falls back to debug keys rather than silently producing something that looks shippable. Release builds also minify and shrink now, with `proguard-rules.pro` keeping Flutter's reflective entry points.
 - [x] **App Links.** `autoVerify` intent-filter on `https://${appLinkHost}/app`, host injected from `key.properties`. Defaults to `receipts.aacu-church.org`.
 - [x] **Account deletion.** `DELETE /api/v1/auth/account` plus a two-step UI: the first step explains that household receipts survive (they belong to the household, not the person), the second requires typing DELETE, so an irreversible action cannot be tapped through. Tested.
@@ -130,9 +192,11 @@ Named because none of it is code I can write:
 - [ ] **Should `analysis/` and `parsed/` be published?** Both are git-ignored right now because this repo is public and they are derived from 103 real receipts (752 line items, association rules, spend statistics). Un-ignore only deliberately.
 - [ ] Still deferred by choice: `LedgerScaffold`, `PriceVerdict` and `ItemMark` from `.interface-design/system.md` are specified but absent; the four near-identical list rows (min-heights 76/72/64/56) are not consolidated; full localisation is out.
 
-## Physical-device validation — the one thing left by design
+## Physical-device validation — script status
 
-- [ ] Run the capture-to-ledger script on a physical Android phone: install → sign in → choose household → multi-page capture → upload → OCR → retry/manual fallback → review → file → Home/Receipts/Insights/List. Then repeat with TalkBack and large text on a 320–360 dp device. The script in [the MVP UI/UX plan](docs/mvp-ui-ux-plan.md) has duplicated step numbers (steps 4–8 collide with 6–8) and needs renumbering.
+Started 26 August 2026; see the section above for what it found and what is left.
+
+- [ ] Run the rest of the capture-to-ledger script on a physical Android phone: multi-page capture → upload → OCR → retry/manual fallback → review → file → Home/Receipts/Insights/List. Install, sign in and choose household are done. Then repeat with TalkBack and large text on a 320–360 dp device. The script in [the MVP UI/UX plan](docs/mvp-ui-ux-plan.md) has duplicated step numbers (steps 4–8 collide with 6–8) and needs renumbering.
 
 See [MVP release checklist](docs/mvp-release-checklist.md) for the exact handoff and backup procedure.
 

@@ -59,10 +59,18 @@ python -m uvicorn grocery_home.app:app --host 127.0.0.1 --port 8000
 Bind to `127.0.0.1`, not `0.0.0.0`: the tunnel is the only way in, so there is
 no reason to listen on the LAN as well.
 
-Schema migrations apply on startup (`initialize_schema`), including migration 2
-which adds accounts and tenancy. **Back up `grocery_home.sqlite3` plus its
-`-wal`/`-shm` files and the `receipts/` directory before the first run on real
-data** — migration 2 rebuilds the `households` table.
+Schema migrations apply on startup (`initialize_schema`): migration 2 adds
+accounts and tenancy, and migration 3 gives `upload_files` a `household_id` and
+makes the canonical-hash uniqueness per household instead of global. **Back up
+`grocery_home.sqlite3` plus its `-wal`/`-shm` files and the `receipts/`
+directory before the first run on real data** — migration 2 rebuilds the
+`households` table, and migration 3 alters `upload_files` and replaces one of
+its indexes.
+
+Upload batches created before migration 3 belong to household 1. If a capture
+was made while the service was on older code, that batch stays invisible to the
+household that made it — photograph the receipt again rather than trying to
+recover it.
 
 ## 4. Build the app against it
 
