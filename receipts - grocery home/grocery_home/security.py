@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import hmac
 import math
@@ -247,6 +249,26 @@ class SessionManager:
     def load(self, token: str | None) -> SessionData:
         if not token:
             raise InvalidSessionError("Session cookie is missing")
+        # itsdangerous verifies the decoded signature bytes.  Python's base64
+        # decoder accepts non-canonical trailing bits, so two different final
+        # characters can sometimes decode to the same signature.  Require the
+        # exact canonical URL-safe encoding before accepting the token; this
+        # makes every textual change fail closed as callers expect.
+        try:
+            encoded_signature = token.rsplit(".", 1)[1]
+            padded_signature = encoded_signature + "=" * (-len(encoded_signature) % 4)
+            signature = base64.b64decode(
+                padded_signature.encode("ascii"),
+                altchars=b"-_",
+                validate=True,
+            )
+            canonical_signature = (
+                base64.urlsafe_b64encode(signature).rstrip(b"=").decode("ascii")
+            )
+        except (IndexError, UnicodeEncodeError, binascii.Error, ValueError) as exc:
+            raise InvalidSessionError("Session signature is invalid") from exc
+        if not hmac.compare_digest(encoded_signature, canonical_signature):
+            raise InvalidSessionError("Session signature is invalid")
         try:
             payload = self._serializer.loads(
                 token,

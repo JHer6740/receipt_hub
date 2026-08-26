@@ -144,6 +144,21 @@ def test_health_is_public_and_reports_ok(
     assert response.json()["status"] == "ok"
 
 
+def test_forwarded_http_request_redirects_to_https(
+    api: tuple[TestClient, Database, Settings],
+) -> None:
+    client, _database, _settings = api
+
+    response = client.get(
+        "/api/v1/health?probe=1",
+        headers={"X-Forwarded-Proto": "http"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 308
+    assert response.headers["location"] == "https://testserver/api/v1/health?probe=1"
+
+
 def test_successful_response_uses_the_documented_envelope(
     api: tuple[TestClient, Database, Settings],
 ) -> None:

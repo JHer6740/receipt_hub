@@ -249,6 +249,10 @@ def test_argon2_pin_and_signed_session_cookie() -> None:
     with pytest.raises(InvalidSessionError):
         manager.load(issued.token + "tampered")
 
+    noncanonical = issued.token[:-1] + ("A" if issued.token[-1] != "A" else "B")
+    with pytest.raises(InvalidSessionError):
+        manager.load(noncanonical)
+
     response = Response()
     manager.set_cookie(response, issued)
     cookie_header = response.headers["set-cookie"].lower()

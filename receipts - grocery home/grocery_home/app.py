@@ -321,6 +321,19 @@ def create_app(
     )
     application.state.database = database
     application.state.settings = active_settings
+
+    @application.middleware("http")
+    async def redirect_forwarded_http(request: Request, call_next):
+        """Redirect cleartext edge requests while preserving local health checks."""
+
+        forwarded_proto = request.headers.get("x-forwarded-proto", "")
+        if forwarded_proto.split(",", 1)[0].strip().casefold() == "http":
+            return RedirectResponse(
+                str(request.url.replace(scheme="https")),
+                status_code=308,
+            )
+        return await call_next(request)
+
     application.mount(
         "/static",
         StaticFiles(directory=PACKAGE_DIR / "static"),
