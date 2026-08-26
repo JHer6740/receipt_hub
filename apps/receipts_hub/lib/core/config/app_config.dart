@@ -8,6 +8,8 @@
 // Override at build time:
 //   flutter build apk --dart-define=RECEIPTS_HUB_API_BASE_URL=https://api.example.com
 
+import 'package:flutter/foundation.dart';
+
 abstract final class AppConfig {
   /// The service this build uses. HTTPS in every real deployment.
   /// Overridden per build; the default is the current deployment target
@@ -55,4 +57,12 @@ abstract final class AppConfig {
     'RECEIPTS_HUB_ALLOW_HOST_OVERRIDE',
     defaultValue: true,
   );
+
+  /// Whether anything in this build may point the app at another service.
+  ///
+  /// The network layer asks this too, not just the UI: a build with no way to
+  /// enter an address must not honour one it finds in storage either, or a
+  /// customer whose stored address predates a deployment move is stuck talking
+  /// to a host that no longer answers, with no screen to correct it.
+  static bool get hostOverrideAvailable => kDebugMode && allowHostOverride;
 }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/data/error_reporter.dart';
 import '../../core/design/app_components.dart';
 import '../../core/design/app_theme.dart';
 import '../../core/state/app_state.dart';
@@ -49,13 +50,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _busy = true);
     final controller = ref.read(appControllerProvider.notifier);
     final email = _email.text.trim();
-    final failure = _isCreating
-        ? await controller.createAccount(
-            email: email,
-            password: _password.text,
-            displayName: _name.text,
-          )
-        : await controller.logIn(email: email, password: _password.text);
+    // Guarded, not just awaited: a throw here would leave the button spinning
+    // with no message and no way forward.
+    String? failure;
+    try {
+      failure = _isCreating
+          ? await controller.createAccount(
+              email: email,
+              password: _password.text,
+              displayName: _name.text,
+            )
+          : await controller.logIn(email: email, password: _password.text);
+    } on Object catch (error, stack) {
+      errorReporter.report(ReportedError(error: error, stack: stack));
+      failure = 'Something went wrong. Please try again.';
+    }
     if (!mounted) return;
     setState(() {
       _busy = false;

@@ -26,13 +26,28 @@ class SessionEnvelope {
   final DateTime expiresAt;
   final String householdName;
 
+  /// Two shapes reach here, and both have to be read.
+  ///
+  /// The account routes — register, log in, refresh — return `token` and a
+  /// flat `household_name`. The developer PIN route predates them and returns
+  /// `session_token` with a nested `household`. Reading only the PIN shape is
+  /// what made every real signup fail: the service created the account, then
+  /// `json['session_token'] as String` threw on null, which is not an
+  /// ApiFailure, so nothing caught it and the button spun forever.
+  ///
+  /// A missing token is left empty rather than cast, so the caller can turn it
+  /// into a typed failure instead of an unhandled crash.
   factory SessionEnvelope.fromJson(Map<String, dynamic> json) =>
       SessionEnvelope(
-        token: json['session_token'] as String,
+        token:
+            (json['token'] as String?) ??
+            (json['session_token'] as String?) ??
+            '',
         expiresAt:
             _dateOrNull(json['expires_at']) ??
             DateTime.now().add(const Duration(days: 30)),
         householdName:
+            (json['household_name'] as String?) ??
             (json['household'] as Map<String, dynamic>?)?['name'] as String? ??
             'Household',
       );

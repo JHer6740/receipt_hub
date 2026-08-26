@@ -50,14 +50,31 @@ const _accountRoutes = <String>{'/household', '/household/join'};
 GoRouter createAppRouter({
   String initialLocation = '/welcome',
   AppState Function()? readState,
+  Listenable? refreshListenable,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
+    // Without this the guard below runs once and never again, so the splash
+    // screen never leaves: `restoreSession()` resolves, the state changes, and
+    // nothing tells the router to look again.
+    refreshListenable: refreshListenable,
     redirect: readState == null
         ? null
         : (context, state) {
             final app = readState();
             final location = state.uri.path;
+            final signedIn =
+                app.connection != HubConnection.signedOut &&
+                app.connection != HubConnection.authFailed;
+
+            // The splash exists only while a stored session is resolving, so
+            // it has to know where to send people once it has. Treating it as
+            // an ordinary public route left the app sitting on it forever.
+            if (location == '/splash') {
+              if (app.connection == HubConnection.connecting) return null;
+              if (app.connected) return '/home';
+              return signedIn ? '/household' : '/welcome';
+            }
 
             if (_publicRoutes.contains(location)) {
               // Nothing to do here but leave once there is a session.
@@ -69,9 +86,6 @@ GoRouter createAppRouter({
             // someone who is in fact signed in out to the front door.
             if (app.connection == HubConnection.connecting) return '/splash';
 
-            final signedIn =
-                app.connection != HubConnection.signedOut &&
-                app.connection != HubConnection.authFailed;
             if (!signedIn) return '/welcome';
 
             // An account without a household has nowhere to file a receipt,

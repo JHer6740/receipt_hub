@@ -11,6 +11,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:receipts_hub/core/config/app_config.dart';
 import 'package:receipts_hub/core/network/mobile_api.dart';
 
 /// A transport that answers from a canned routing table instead of a network.
@@ -71,13 +72,17 @@ ResponseBody _fail(
 }, status: status);
 
 ({MobileApi api, _FakeAdapter adapter}) buildApi(
-  ResponseBody Function(RequestOptions options) handler,
-) {
+  ResponseBody Function(RequestOptions options) handler, {
+  bool? allowHostOverride,
+}) {
   final adapter = _FakeAdapter(handler);
   final dio = Dio(
     BaseOptions(validateStatus: (status) => status != null && status < 500),
   )..httpClientAdapter = adapter;
-  return (api: MobileApi(dio: dio), adapter: adapter);
+  return (
+    api: MobileApi(dio: dio, allowHostOverride: allowHostOverride),
+    adapter: adapter,
+  );
 }
 
 Future<MobileApi> signedInApi(
@@ -376,5 +381,146 @@ void main() {
         isFalse,
       );
     });
+  });
+
+  // The account routes and the developer PIN route return different session
+  // shapes, and the client has to read both. It read only the PIN shape, so
+  // every real signup died on a null cast *after* the service had created the
+  // account: the button spun forever and nothing said why.
+  group('account sessions', () {
+    ResponseBody accountSession() => _ok(<String, dynamic>{
+      'token': 'account.token.value',
+      'expires_at': '2026-09-25T09:05:09.085348+00:00',
+      'household_name': 'Joe',
+      'user': <String, dynamic>{
+        'id': 'c22b7193dbf34fe490b0a3255246a285',
+        'email': 'joe@example.com',
+        'display_name': 'Joe',
+        'email_verified': false,
+      },
+    });
+
+    test('register reads the payload the account routes send', () async {
+      final built = buildApi((_) => accountSession());
+
+      final session = await built.api.register(
+        email: 'joe@example.com',
+        password: 'a-long-enough-password',
+        displayName: 'Joe',
+      );
+
+      expect(session.token, 'account.token.value');
+      expect(session.householdName, 'Joe');
+      expect(built.api.hasSession, isTrue);
+      expect(
+        built.adapter.requests.single.uri.toString(),
+        '${AppConfig.apiBaseUrl}/api/v1/auth/register',
+      );
+    });
+
+    test('signing in reads it too', () async {
+      final built = buildApi((_) => accountSession());
+
+      final session = await built.api.logIn(
+        email: 'joe@example.com',
+        password: 'a-long-enough-password',
+      );
+
+      expect(session.token, 'account.token.value');
+      expect(session.householdName, 'Joe');
+    });
+
+    test('the configured service is not written to storage', () async {
+      final built = buildApi((_) => accountSession());
+
+      await built.api.logIn(
+        email: 'joe@example.com',
+        password: 'a-long-enough-password',
+      );
+
+      // Only a hand-entered developer host is stored, so a stored address
+      // always means somebody chose it.
+      expect(
+        await const FlutterSecureStorage().read(key: 'receipts_hub.server_url'),
+        isNull,
+      );
+    });
+
+    test(
+      'a session it cannot read fails, rather than throwing a cast',
+      () async {
+        final built = buildApi(
+          (_) => _ok(<String, dynamic>{
+            'expires_at': '2026-09-25T09:05:09.085348+00:00',
+            'household_name': 'Joe',
+          }),
+        );
+
+        await expectLater(
+          built.api.register(
+            email: 'joe@example.com',
+            password: 'a-long-enough-password',
+          ),
+          throwsA(
+            isA<ApiFailure>()
+                .having((f) => f.code, 'code', 'MALFORMED_SESSION')
+                .having((f) => f.kind, 'kind', ApiFailureKind.server),
+          ),
+        );
+        expect(built.api.hasSession, isFalse);
+      },
+    );
+  });
+
+  group('the address this build talks to', () {
+    test(
+      'a stored host is ignored, and cleared, when none may be entered',
+      () async {
+        FlutterSecureStorage.setMockInitialValues(<String, String>{
+          'receipts_hub.server_url': 'http://10.0.2.2:8000',
+        });
+        final built = buildApi(
+          (_) => _ok(<String, dynamic>{}),
+          allowHostOverride: false,
+        );
+
+        await built.api.restoreSession();
+
+        // A release build has no screen for entering an address, so honouring a
+        // stale one leaves signup posting at a host that stopped answering.
+        expect(built.api.baseUrl, AppConfig.apiBaseUrl);
+        expect(
+          await const FlutterSecureStorage().read(
+            key: 'receipts_hub.server_url',
+          ),
+          isNull,
+        );
+      },
+    );
+
+    test('a development build keeps the host it was pointed at', () async {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{
+        'receipts_hub.server_url': 'http://192.168.1.20:8000',
+      });
+      final built = buildApi(
+        (_) => _ok(<String, dynamic>{}),
+        allowHostOverride: true,
+      );
+
+      await built.api.restoreSession();
+
+      expect(built.api.baseUrl, 'http://192.168.1.20:8000');
+    });
+
+    test(
+      'with nothing stored it uses the service this build ships with',
+      () async {
+        final built = buildApi((_) => _ok(<String, dynamic>{}));
+
+        await built.api.restoreSession();
+
+        expect(built.api.baseUrl, AppConfig.apiBaseUrl);
+      },
+    );
   });
 }

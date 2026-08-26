@@ -66,8 +66,12 @@ class ApiFailure implements Exception {
 /// secure storage. Every call unwraps the host's response envelope so callers
 /// only ever see payloads or an [ApiFailure].
 class MobileApi {
-  MobileApi({Dio? dio, FlutterSecureStorage? secureStorage})
-    : _dio =
+  MobileApi({
+    Dio? dio,
+    FlutterSecureStorage? secureStorage,
+    bool? allowHostOverride,
+  }) : _allowHostOverride = allowHostOverride ?? AppConfig.hostOverrideAvailable,
+       _dio =
           dio ??
           Dio(
             BaseOptions(
@@ -87,18 +91,32 @@ class MobileApi {
   final Dio _dio;
   final FlutterSecureStorage _secureStorage;
 
+  /// Whether a stored host address may override this build's own service.
+  final bool _allowHostOverride;
+
   String? _baseUrl;
   String? _token;
 
   /// Restore the saved session, if this device has one.
   ///
-  /// The address falls back to this build's configured service, so a stored
-  /// session keeps working even though nothing asks the person for a host.
+  /// The address comes from this build's configured service. A stored address
+  /// only wins where one could have been entered by hand, and anywhere else it
+  /// is deleted on sight: a device that had been pointed at a development host
+  /// otherwise keeps posting there after an update, so signing up times out
+  /// against a machine that is no longer listening — which is exactly what a
+  /// physical-device run turned up, with no screen able to correct it.
   Future<bool> restoreSession() async {
-    _baseUrl =
-        await _secureStorage.read(key: _serverKey) ?? AppConfig.apiBaseUrl;
+    _baseUrl = await _resolveBaseUrl();
     _token = await _secureStorage.read(key: _tokenKey);
     return _token != null;
+  }
+
+  Future<String> _resolveBaseUrl() async {
+    final stored = await _secureStorage.read(key: _serverKey);
+    if (stored == null || stored.isEmpty) return AppConfig.apiBaseUrl;
+    if (_allowHostOverride) return stored;
+    await _secureStorage.delete(key: _serverKey);
+    return AppConfig.apiBaseUrl;
   }
 
   Future<String?> savedServerUrl() async =>
@@ -164,15 +182,35 @@ class MobileApi {
     String path,
     Map<String, dynamic> body,
   ) async {
-    // A hosted build knows its own address; nobody is asked for one.
+    // A hosted build knows its own address; nobody is asked for one. It is
+    // deliberately not written to storage either — only the hand-entered
+    // developer host is, so a stored address always means someone chose it.
     final base = _baseUrl ??= AppConfig.apiBaseUrl;
     final data = await _send<Map<String, dynamic>>(
       () => _dio.post<Map<String, dynamic>>('$base$path', data: body),
     );
-    final session = SessionEnvelope.fromJson(data);
+    final session = _sessionFrom(data);
     _token = session.token;
-    await _secureStorage.write(key: _serverKey, value: base);
     await _secureStorage.write(key: _tokenKey, value: session.token);
+    return session;
+  }
+
+  /// Read a session envelope, or fail in terms the interface can show.
+  ///
+  /// A payload this client cannot read has to become a typed failure. Letting
+  /// a cast error escape instead left the signup button spinning with nothing
+  /// said, after the service had already created the account.
+  SessionEnvelope _sessionFrom(Map<String, dynamic> data) {
+    final session = SessionEnvelope.fromJson(data);
+    if (session.token.isEmpty) {
+      throw const ApiFailure(
+        kind: ApiFailureKind.server,
+        code: 'MALFORMED_SESSION',
+        message:
+            'Your Receipts Hub answered with a sign-in this app could not '
+            'read. Update the app, or contact support if it keeps happening.',
+      );
+    }
     return session;
   }
 
@@ -191,7 +229,7 @@ class MobileApi {
         data: <String, dynamic>{'pin': pin},
       ),
     );
-    final session = SessionEnvelope.fromJson(data);
+    final session = _sessionFrom(data);
     _baseUrl = base;
     _token = session.token;
     await _secureStorage.write(key: _serverKey, value: base);

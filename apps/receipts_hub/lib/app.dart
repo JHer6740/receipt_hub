@@ -22,17 +22,37 @@ class ReceiptsHubApp extends ConsumerStatefulWidget {
   ConsumerState<ReceiptsHubApp> createState() => _ReceiptsHubAppState();
 }
 
+/// Tells GoRouter to re-run its guard when the session state changes.
+///
+/// GoRouter evaluates `redirect` on navigation and when this notifies. Without
+/// it, a guard that reads app state is only ever correct for the state at
+/// startup — which left the app on its splash screen permanently.
+class _SessionRefresh extends ChangeNotifier {
+  void bump() => notifyListeners();
+}
+
 class _ReceiptsHubAppState extends ConsumerState<ReceiptsHubApp> {
+  final _sessionRefresh = _SessionRefresh();
+
   late final GoRouter _router =
       widget.router ??
       createAppRouter(
         initialLocation: widget.restoreSession ? '/splash' : '/welcome',
         readState: () => ref.read(appControllerProvider),
+        refreshListenable: _sessionRefresh,
       );
 
   @override
   void initState() {
     super.initState();
+    // Re-run the route guard whenever the session state changes.
+    ref.listenManual<HubConnection>(
+      appControllerProvider.select((state) => state.connection),
+      (previous, next) {
+        if (previous != next) _sessionRefresh.bump();
+      },
+    );
+
     if (!widget.restoreSession) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -46,6 +66,7 @@ class _ReceiptsHubAppState extends ConsumerState<ReceiptsHubApp> {
   @override
   void dispose() {
     if (widget.router == null) _router.dispose();
+    _sessionRefresh.dispose();
     super.dispose();
   }
 

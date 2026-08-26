@@ -273,6 +273,49 @@ void main() {
     expect(find.text('People'), findsWidgets);
   });
 
+  testWidgets('the splash leaves once the session resolves', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // Showing the splash was already tested; *leaving* it was not, and it did
+    // not. The guard ran once at startup and GoRouter was never told to look
+    // again, so the app sat on the splash screen forever on a real launch.
+    var connection = HubConnection.connecting;
+    final refresh = ChangeNotifier();
+    addTearDown(refresh.dispose);
+
+    final router = createAppRouter(
+      initialLocation: '/splash',
+      readState: () => AppState(
+        receipts: const <Receipt>[],
+        shopping: const <ShoppingEntry>[],
+        connection: connection,
+      ),
+      refreshListenable: refresh,
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: releaseSurfaceOverrides(),
+        child: ReceiptsHubApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SplashScreen), findsOneWidget);
+
+    // Session restore finishes with no stored token.
+    connection = HubConnection.signedOut;
+    // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
+    refresh.notifyListeners();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.text('Get started'), findsOneWidget);
+  });
+
   testWidgets('deleting an account cannot be tapped through', (tester) async {
     await pumpHub(tester, location: '/account');
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/error_reporter.dart';
 import '../data/preferences_store.dart';
 import '../data/receipts_repository.dart';
 import '../design/app_theme.dart';
@@ -340,7 +341,13 @@ class AppController extends Notifier<AppState> {
     state = state.copyWith(connection: HubConnection.connecting);
     final restored = await api.restoreSession();
     if (!restored) {
-      state = state.copyWith(connection: HubConnection.signedOut);
+      // Publish the resolved address even with no session, so the developer
+      // screen shows the host the app will actually use rather than a default
+      // it stopped using the moment this ran.
+      state = state.copyWith(
+        connection: HubConnection.signedOut,
+        serverUrl: api.baseUrl ?? state.serverUrl,
+      );
       return;
     }
     state = state.copyWith(
@@ -409,6 +416,18 @@ class AppController extends Notifier<AppState> {
         failureMessage: failure.message,
       );
       return failure.message;
+    } on Object catch (error, stack) {
+      // Anything that is not an ApiFailure used to escape here and leave the
+      // signup button spinning with nothing said. Authentication is the one
+      // path a person cannot work around, so it reports rather than throws.
+      errorReporter.report(ReportedError(error: error, stack: stack));
+      const message = 'Something went wrong finishing that. Please try again.';
+      state = state.copyWith(
+        connection: HubConnection.signedOut,
+        isLoading: false,
+        failureMessage: message,
+      );
+      return message;
     }
   }
 
@@ -458,10 +477,19 @@ class AppController extends Notifier<AppState> {
   /// Which connection state a failure puts the app into.
   ///
   /// Kept in one place so every caller reports the same distinction between a
-  /// service that is down and a session that was rejected.
+  /// service that is down, a session that was rejected, and an account that
+  /// simply has not chosen a household yet.
+  ///
+  /// That last case used to fall through to `unavailable`, so a perfectly
+  /// healthy service with a signed-in account that had no household reported
+  /// itself as not responding.
   static HubConnection _connectionFor(ApiFailure failure) {
     if (failure.isUnreachable) return HubConnection.unavailable;
     if (failure.needsSignIn) return HubConnection.authFailed;
+    if (failure.code == 'NO_HOUSEHOLD_SELECTED' ||
+        failure.code == 'HOUSEHOLD_NOT_FOUND') {
+      return HubConnection.pendingHousehold;
+    }
     return HubConnection.unavailable;
   }
 
@@ -471,7 +499,10 @@ class AppController extends Notifier<AppState> {
   /// Reload every household surface from the host.
   Future<void> refresh() async {
     if (!api.hasSession) {
-      state = state.copyWith(connection: HubConnection.signedOut);
+      state = state.copyWith(
+        connection: HubConnection.signedOut,
+        isLoading: false,
+      );
       return;
     }
     state = state.copyWith(isLoading: true, clearFailure: true);
@@ -491,11 +522,17 @@ class AppController extends Notifier<AppState> {
         offline: false,
       );
     } on ApiFailure catch (failure) {
+      final connection = _connectionFor(failure);
       state = state.copyWith(
         isLoading: false,
         offline: failure.isUnreachable,
-        connection: _connectionFor(failure),
-        failureMessage: failure.message,
+        connection: connection,
+        // "Choose a household" is a step, not a fault. Surfacing it as a
+        // failure message put an error banner on the household chooser.
+        failureMessage: connection == HubConnection.pendingHousehold
+            ? null
+            : failure.message,
+        clearFailure: connection == HubConnection.pendingHousehold,
       );
     }
   }
@@ -509,7 +546,10 @@ class AppController extends Notifier<AppState> {
   /// Load the households this account can see.
   Future<String?> loadHouseholds() async {
     if (!api.hasSession) {
-      state = state.copyWith(connection: HubConnection.signedOut);
+      state = state.copyWith(
+        connection: HubConnection.signedOut,
+        isLoading: false,
+      );
       return 'Sign in to see your households.';
     }
     state = state.copyWith(isLoading: true, clearFailure: true);

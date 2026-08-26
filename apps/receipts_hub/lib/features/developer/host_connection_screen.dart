@@ -8,7 +8,6 @@
 // development. It is reachable only from a debug build (see `WelcomeScreen`),
 // and `AppConfig.allowHostOverride` can switch it off entirely.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +18,7 @@ import '../../core/design/app_theme.dart';
 import '../../core/state/app_state.dart';
 
 /// Whether the hand-entered host path is available in this build at all.
-bool get hostOverrideAvailable => kDebugMode && AppConfig.allowHostOverride;
+bool get hostOverrideAvailable => AppConfig.hostOverrideAvailable;
 
 /// Whether the UI should offer developer tools.
 ///
