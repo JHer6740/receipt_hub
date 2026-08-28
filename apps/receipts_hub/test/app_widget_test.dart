@@ -170,7 +170,7 @@ void main() {
   testWidgets('every comparison price names source and freshness', (
     tester,
   ) async {
-    await pumpHub(tester, location: '/items/Full%20cream%20milk?from=insights');
+    await pumpHub(tester, location: '/items/Full%20cream%20milk?from=home');
 
     await tester.scrollUntilVisible(
       find.text('Your receipts'),
@@ -367,4 +367,81 @@ void main() {
       }
     },
   );
+
+  testWidgets('account is reachable from the navigation bar', (tester) async {
+    // It used to be reachable only from an icon on Home, so from Receipts,
+    // Scan or List there was no route to export, deletion, the household's
+    // people or privacy at all.
+    await pumpHub(tester, location: '/receipts');
+
+    await tester.tap(find.text('Account').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('account-connection')), findsOneWidget);
+    // A destination, not a pushed page: no back arrow out of a tab.
+    expect(find.byTooltip('Back'), findsNothing);
+  });
+
+  testWidgets('home orders collections by spend or by movement', (
+    tester,
+  ) async {
+    // What the Insights screen contributed, minus the screen: it rendered
+    // Home's month total, Home's delta and Home's chart a second time, and
+    // ordered the same collections by how far they had moved.
+    await pumpHub(tester, location: '/home');
+
+    Iterable<String> collectionOrder() => tester
+        .widgetList<Text>(
+          find.descendant(
+            of: find.byKey(const Key('home-collections-sheet')),
+            matching: find.byType(Text),
+          ),
+        )
+        .map((widget) => widget.data ?? '')
+        .where(
+          (label) => const <String>{
+            'Groceries',
+            'Home',
+            'Health',
+            'Travel',
+          }.contains(label),
+        );
+
+    final bySpend = collectionOrder().toList();
+    expect(bySpend, isNotEmpty);
+
+    await tester.tap(find.byKey(const ValueKey<String>('home-order-change')));
+    await tester.pumpAndSettle();
+
+    final byChange = collectionOrder().toList();
+    // Same collections, and the one that moved furthest is now first.
+    expect(byChange.toSet(), bySpend.toSet());
+    expect(byChange.first, isNot(bySpend.first));
+    expect(byChange.first, 'Home');
+  });
+
+  testWidgets('a link to the old insights screen still lands somewhere', (
+    tester,
+  ) async {
+    // Insights was a destination for months. A bookmark, or a link in an email
+    // the service has already sent, must not reach a "page not found".
+    final router = await pumpHub(tester, location: '/home');
+
+    router.go('/insights');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('home-screen')), findsOneWidget);
+    expect(find.text('Page not found'), findsNothing);
+  });
+
+  testWidgets('an old comparison link keeps its way back', (tester) async {
+    await pumpHub(tester, location: '/rivals?from=insights');
+    await tester.pumpAndSettle();
+
+    // The origin resolves to Home rather than to a route that no longer
+    // exists, so the back affordance still goes somewhere.
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('home-screen')), findsOneWidget);
+  });
 }

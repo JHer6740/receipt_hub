@@ -22,7 +22,9 @@ String _origin(GoRouterState state, String fallback) {
   return switch (state.uri.queryParameters['from']) {
     'home' => '/home',
     'receipts' || 'receipt' => '/receipts',
-    'insights' => '/insights',
+    // Insights was folded into Home. Links that still name it resolve there
+    // rather than to a route that no longer exists.
+    'insights' => '/home',
     'rivals' => '/rivals',
     'list' => '/list',
     'account' => '/account',
@@ -220,23 +222,26 @@ GoRouter createAppRouter({
               origin: _origin(state, '/home'),
             ),
           ),
+          // Insights is gone: it rendered Home's month total, Home's delta
+          // and Home's six-month chart again, and its one distinct part — the
+          // collections ordered by movement — is an ordering on Home now. A
+          // bookmark or a notification deep link still resolves.
           GoRoute(
             path: '/insights',
-            name: 'insights',
-            builder: (context, state) => const InsightsScreen(),
+            redirect: (context, state) => '/home',
           ),
           GoRoute(
             path: '/rivals',
             name: 'rivals',
             builder: (context, state) =>
-                RivalsScreen(origin: _origin(state, '/insights')),
+                RivalsScreen(origin: _origin(state, '/home')),
           ),
           GoRoute(
             path: '/items/:name',
             name: 'item',
             builder: (context, state) => ItemComparisonScreen(
               itemName: Uri.decodeComponent(state.pathParameters['name']!),
-              origin: _origin(state, '/insights'),
+              origin: _origin(state, '/home'),
             ),
           ),
           GoRoute(

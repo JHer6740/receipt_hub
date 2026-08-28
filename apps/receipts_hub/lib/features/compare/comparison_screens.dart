@@ -253,7 +253,7 @@ class RivalsScreen extends ConsumerWidget {
                 ),
                 child: Row(
                   children: <Widget>[
-                    MerchantMark(name: item.name, size: 42),
+                    ItemMark(name: item.name, size: 42),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -481,7 +481,7 @@ class _ItemComparisonScreenState extends ConsumerState<ItemComparisonScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      MerchantMark(name: item.name, size: 52),
+                      ItemMark(name: item.name, size: 52),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

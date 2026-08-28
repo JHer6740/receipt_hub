@@ -77,6 +77,64 @@ class RaisedLedgerSheet extends StatelessWidget {
   }
 }
 
+/// One row in a ledger list.
+///
+/// Three screens hand-rolled this: the same
+/// `Material > InkWell > Container(min height, padding, one-pixel bottom
+/// divider)` skeleton, with three different magic minimum heights — 76, 72 and
+/// 64 — while `AppSpacing.rowMinHeight` sat in the design system unused. A
+/// minimum only decides the height of a row whose content is shorter than it
+/// is, so those numbers differed without changing what anyone saw. What they
+/// did do was make it easy for the next row to land under the tap target, and
+/// easy to forget the divider.
+///
+/// The contents stay the caller's: these rows show genuinely different things.
+/// It is the frame around them that was copied.
+class LedgerRow extends StatelessWidget {
+  const LedgerRow({
+    required this.child,
+    this.onTap,
+    this.showDivider = true,
+    this.semanticLabel,
+    super.key,
+  });
+
+  final Widget child;
+
+  /// Omit for a row that is not tappable; the ink and button semantics go with
+  /// it, rather than being advertised to a screen reader and doing nothing.
+  final VoidCallback? onTap;
+
+  final bool showDivider;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Container(
+      constraints: const BoxConstraints(minHeight: AppSpacing.rowMinHeight),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: showDivider
+            ? Border(bottom: BorderSide(color: context.appColors.divider))
+            : null,
+      ),
+      child: child,
+    );
+
+    final onTap = this.onTap;
+    if (onTap == null) return row;
+
+    final tappable = Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: row),
+    );
+    final label = semanticLabel;
+    return label == null
+        ? tappable
+        : Semantics(button: true, label: label, child: tappable);
+  }
+}
+
 class SectionLabel extends StatelessWidget {
   const SectionLabel(this.label, {this.trailing, super.key});
 
@@ -200,6 +258,24 @@ class MerchantMark extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The same mark, for a product rather than a shop.
+///
+/// `.interface-design/system.md` names `MerchantMark` and `ItemMark` together
+/// and gives them one treatment, so this is deliberately not a second
+/// implementation. It exists because three item surfaces were calling
+/// `MerchantMark(name: item.name)`, which reads as a claim that a product is a
+/// shop, and because a product mark is where the two will diverge first if
+/// they ever do.
+class ItemMark extends StatelessWidget {
+  const ItemMark({required this.name, this.size = 38, super.key});
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => MerchantMark(name: name, size: size);
 }
 
 class ReceiptAppMark extends StatelessWidget {

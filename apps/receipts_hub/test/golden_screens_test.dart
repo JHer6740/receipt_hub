@@ -96,7 +96,7 @@ void main() {
   testWidgets('item comparison reference golden', (tester) async {
     await goldenRoute(
       tester,
-      '/items/Full%20cream%20milk?from=insights',
+      '/items/Full%20cream%20milk?from=home',
       'goldens/item_comparison_sage_light.png',
     );
   });

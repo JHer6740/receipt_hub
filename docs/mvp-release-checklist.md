@@ -14,7 +14,7 @@ Status: **implementation-ready, release-blocked only by device and operational v
    `grocery_home.sqlite3`, SQLite WAL/SHM files, and `receipts\` must be captured together.
 3. Run the backend with a generated `GROCERY_HOME_SESSION_SECRET` of at least 32 random characters. Keep `.env` outside version control.
 4. Start the API on the private LAN and verify `/api/v1/health` from the Android device.
-5. On a physical Android phone, test: connect → PIN auth → multi-page capture → upload → OCR polling → retry/manual fallback → review → file → Home/Receipts/Insights/List.
+5. On a physical Android phone, test: sign up → choose a household → multi-page capture → upload → OCR polling → retry/manual fallback → review → file → Home/Receipts/List. (No connect step and no PIN: the service address is build-time configuration. Insights was folded into Home on 26 August 2026.)
 6. Verify the Docker stack with `docker compose config` and `docker compose up`; Docker was unavailable on the development workstation.
 7. Profile receipt-list scrolling, image rendering, upload/OCR latency, and Riverpod rebuilds.
 8. Complete accessibility checks with large text, contrast, reduced motion, back navigation, and a smaller phone.

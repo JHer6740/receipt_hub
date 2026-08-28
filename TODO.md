@@ -186,11 +186,72 @@ Named because none of it is code I can write:
 - [ ] **Ownership transfer.** An owner cannot be removed and ownership cannot be handed over, so a household whose owner leaves cannot be re-administered.
 - [ ] **Launch market.** Currency is hard-locked to `en_AU` and `DateFormat` calls omit a locale, so dates render `en_US` regardless of device. Fine for an AU-only launch — decide and state it rather than discover it.
 
-## NEXT SESSION — open decisions
+## Open decisions — settled 26 August 2026
 
-- [ ] **Merge Home and Insights?** They are ~70% the same screen — both render month total, delta, six-month chart and collections. Merging frees the nav slot Account currently lacks (Account is reachable only from Home's app-bar icon, and `AppShell._selectedIndex` returns 0 for `/account`, `/collections` and `/household`).
-- [ ] **Should `analysis/` and `parsed/` be published?** Both are git-ignored right now because this repo is public and they are derived from 103 real receipts (752 line items, association rules, spend statistics). Un-ignore only deliberately.
-- [ ] Still deferred by choice: `LedgerScaffold`, `PriceVerdict` and `ItemMark` from `.interface-design/system.md` are specified but absent; the four near-identical list rows (min-heights 76/72/64/56) are not consolidated; full localisation is out.
+**Home and Insights are one screen.** Insights rendered Home's month total,
+Home's delta and Home's six-month chart a second time; its one distinct
+contribution was listing the same collections ordered by how far they had
+moved. That is an ordering, not a screen, so Home's collections sheet gained a
+`By spend` / `By change` control and `InsightsScreen` is gone. Nothing is lost
+and no rows are duplicated.
+
+- [x] The freed navigation slot went to **Account**, which until now was
+  reachable only from an icon on Home — so from Receipts, Scan or List there
+  was no route to export, account deletion, the household's people or privacy
+  at all. That icon is gone with it: one way to a place, not two.
+- [x] Account draws no back arrow as a destination, and still draws one when it
+  was pushed onto something. An arrow that leaves a tab is what makes
+  navigation feel improvised.
+- [x] `/insights` redirects to `/home`, and `?from=insights` origins resolve
+  there, so a bookmark or an already-sent link does not reach "page not found".
+  Both are tested.
+- [x] The `AppShell._selectedIndex` complaint in the old note was already
+  fixed: it returns null rather than falling through to Home. Home now owns
+  `/collections`, `/rivals` and `/items` so those keep a tab lit.
+
+**`analysis/` and `parsed/` stay unpublished.** Settled, not pending. They are
+derived from 103 real receipts — 752 line items with prices and quantities,
+association rules, spend statistics — and this repository is public. There is
+no version of "publish the household's own grocery spending" that is worth a
+dashboard. `.gitignore` records the reason at each entry; regenerate locally
+with the scripts in the backend root.
+
+**Deferred design-system components, resolved individually** rather than as one
+bundle:
+
+- [x] **`LedgerScaffold` built** (`lib/core/widgets/ledger_scaffold.dart`).
+  Four screens repeated the same app bar, `HouseholdGate` and pull-to-refresh
+  by hand, including the destination a signed-out person is sent to. That is
+  the part worth centralising: a screen that forgot the gate would render a
+  household's figures to whoever opened the route. Pixel-identical — the
+  goldens did not move.
+- [x] **`ItemMark` added**, and the three item surfaces that were calling
+  `MerchantMark(name: item.name)` now use it. The design system names the two
+  together and gives them one treatment, so it delegates rather than
+  reimplementing; what it fixes is code that read as a claim that a product is
+  a shop.
+- [x] **The four list rows are one `LedgerRow`.** They had four different magic
+  minimum heights — 76, 72, 64 and 56 — while `AppSpacing.rowMinHeight` sat in
+  the design system unused. A minimum only decides the height of a row whose
+  content is shorter than it is, so those numbers differed without changing
+  what anyone saw; what they did do was make it easy for the next row to land
+  under the tap target. Three rows share the frame now and the editable
+  line-item row keeps its own shape, because its divider has to wrap a delete
+  action that sits outside the tappable area — but it uses the token.
+- [ ] **`PriceVerdict` still deferred, and for a reason**: "supported headline,
+  exact basis, annual effect where valid, and the source line" cannot be built
+  honestly against fields that do not exist yet. It lands with the comparison
+  endpoints, not before, or it gets built against fixtures — which is how
+  invented savings reached real screens the first time.
+- [ ] **Localisation stays out.** Currency is `en_AU` and `DateFormat` calls
+  omit a locale, so dates render `en_US` regardless of device. Fine for an
+  AU-only launch; this is the decision, not an oversight, and it is the same
+  item as "Launch market" in Section D.
+
+Verified: `flutter analyze` clean, **65 Flutter tests pass** (was 61). New
+coverage: Account reachable from the navigation bar with no back arrow, Home's
+collections reordering by movement, the `/insights` redirect, and an old
+comparison link keeping its way back.
 
 ## Physical-device validation — script status
 

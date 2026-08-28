@@ -29,14 +29,21 @@ class AccountScreen extends ConsumerWidget {
     final colors = context.appColors;
 
     return Scaffold(
+      // A destination in the navigation bar, so no back arrow is drawn for it.
+      // One is kept for the case where Account was pushed onto something —
+      // a deep link into it, say — because then there is somewhere to go back
+      // to. Drawing an arrow that leaves a tab is what makes navigation feel
+      // improvised.
       appBar: AppBar(
         title: const Text('Account'),
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/home'),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
+        leading: context.canPop()
+            ? IconButton(
+                tooltip: 'Back',
+                onPressed: context.pop,
+                icon: const Icon(Icons.arrow_back_rounded),
+              )
+            : null,
+        automaticallyImplyLeading: false,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
