@@ -177,11 +177,36 @@ Named because none of it is code I can write:
 - [ ] **A crash-reporting account/DSN**, then wire it into `ErrorReporter`.
 - [ ] **An email provider**, then finish password-reset delivery and add email verification (deliberately unimplemented — without delivery nobody could get a token).
 
+### Review burden — the churn risk, measured 28 August 2026
+
+OCR on the Pi is fast enough: **~19-22s** end to end for a real 1.2 MP receipt
+photograph, against the app's three-minute poll budget. That closes the timing
+question. What the same benchmark found instead is a trust problem.
+
+- [x] **Measured.** `docs/ocr-review-burden.md` has the numbers, the evidence
+  from four real receipts, and a plan in priority order. Not implemented.
+- [ ] **The per-line review flag carries no information.** `ingestion.py:577`
+  ORs the receipt's own status into every line, and photographed receipts are
+  always `needs_review`, so **every line of every photo is flagged, always** —
+  and the interface renders that constant as "Read with low confidence" on each
+  row. One receipt had 33 lines summing to its stated total *to the cent* and
+  all 33 were flagged.
+- [ ] **The arithmetic that would settle it is computed and ignored.**
+  `services.receipt_warnings` and the API's `balance` both reconcile lines
+  against the total; the flagging consults neither. Letting arithmetic overrule
+  confidence takes that receipt from 33 prompts to zero.
+- [ ] **Continuation lines are parsed as products.** `2.137kg Net @ 3.69 $/kg`
+  and `Qty 3 @ $9.99 ea.` become rows, which invents products and shifts
+  name-to-price pairing by one row. ALDI and Woolworths receipts are full of
+  them. The benchmark image is a ready-made fixture with a known answer.
+- [ ] Decide the open question in that document: should a receipt whose lines
+  reconcile, with a merchant and a date, file without a review step at all?
+
 ### Still open, and mine to do
 
 - [ ] **Comparison evidence** — the last feature gap. Schema plus `/rivals`, `/items/{key}`, `/shopping/quotes`; Rivals and Item currently show the honest "not enough prices yet" panel.
 - [ ] **Set the Pi up** following [the Pi API handover](docs/pi-api-handover.md). Two blockers first: Raspberry Pi OS (Bookworm) ships Python 3.11 and `pyproject.toml` requires 3.12+, and the `[ocr]` extra needs aarch64 wheels for onnxruntime/rapidocr.
-- [ ] **Measure OCR on the Pi.** ONNX Runtime / RapidOCR on ARM will be much slower than on this machine, and the capture flow polls with a three-minute budget. Time a real receipt end to end before assuming it feels acceptable.
+- [x] **OCR on the Pi measured** — ~19-22s end to end for a real 1.2 MP receipt photograph, well inside the three-minute poll budget. Every legible price on the benchmark receipt was read correctly. See [the review-burden plan](docs/ocr-review-burden.md).
 - [ ] **Postgres and object storage.** SQLite is one writer, and receipt images sit on the Pi's filesystem — a durability concern more than an access one. Revisit when it hurts.
 - [ ] **Ownership transfer.** An owner cannot be removed and ownership cannot be handed over, so a household whose owner leaves cannot be re-administered.
 - [ ] **Launch market.** Currency is hard-locked to `en_AU` and `DateFormat` calls omit a locale, so dates render `en_US` regardless of device. Fine for an AU-only launch — decide and state it rather than discover it.
