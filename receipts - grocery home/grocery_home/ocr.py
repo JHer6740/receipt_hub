@@ -116,9 +116,28 @@ _QTY = re.compile(
     r"(?:@|x)?\s*\$?(?P<unit_price>\d+(?:\.\d+)?)?",
     re.I,
 )
+# The "@" in "Qty 3 @ $9.99 ea." is read as a 0, an O or an a often enough to
+# matter: on the benchmark ALDI receipt it came back as "Qty 3 0 $9,99 ea." and
+# this pattern missed it, so the continuation line became a product of its own
+# and took the next product's price with it. Digit lookalikes are accepted only
+# with whitespace on both sides, so "Qty 30" cannot read as "Qty 3 @ 0".
+_AT_SIGN = r"(?:\s*@\s*|\s+[0OoAa]\s+)"
+
 _QTY_DETAIL = re.compile(
-    r"^Q(?:ty|TY)\s+(?P<qty>\d+(?:\.\d+)?)\s*@\s*\$?\s*"
-    r"(?P<unit_price>\d+(?:\.\d+)?)\s*(?:ea|each)\.?\b",
+    r"^Q(?:ty|TY)\s+(?P<qty>\d+(?:\.\d+)?)"
+    + _AT_SIGN
+    + r"\$?\s*(?P<unit_price>\d+(?:[.,]\d+)?)\s*(?:ea|each)\.?\b",
+    re.I,
+)
+
+# "2.021kg Net @ 3.69 $/kg" — the second line of a weighed item. It had no
+# handler at all, so it was treated as a description and paired with the
+# following product's amount, shifting every name against its price from there
+# down. Supermarket receipts are full of these.
+_WEIGHT_DETAIL = re.compile(
+    r"^(?P<qty>\d+(?:\.\d+)?)\s*kg\b[^@0-9]*"
+    + _AT_SIGN
+    + r"\$?\s*(?P<unit_price>\d+(?:[.,]\d+)?)\s*\$?\s*/\s*kg",
     re.I,
 )
 _SKIP_ITEM = re.compile(
@@ -289,12 +308,60 @@ def parse_ocr_receipt(
 
     pending_description = ""
     deferred_amount: int | None = None
+    # Amounts read cleanly but with no description to attach them to. On a
+    # receipt whose footer labels are lost to shadow these are the subtotal,
+    # the total, and any product row whose text did not survive. Dropping them
+    # silently is what made a receipt quietly short of its own total.
+    orphan_amounts: list[int] = []
     line_index = 0
     while line_index < len(result.lines):
         line = result.lines[line_index]
         cleaned = " ".join(line.text.split())
         if re.match(r"^SUB\s*TOTAL\b", cleaned, re.I):
             break
+        weight_detail = _WEIGHT_DETAIL.match(cleaned)
+        if weight_detail and parsed.items:
+            parsed.items[-1] = replace(
+                parsed.items[-1],
+                quantity=Decimal(weight_detail.group("qty")),
+                quantity_unit="kg",
+                unit_price_cents=_money_to_cents(
+                    weight_detail.group("unit_price")
+                ),
+            )
+            # A weight line and the product row beneath it are close enough
+            # together to be merged into one spatial row, so whatever follows
+            # the weight has to be handed on rather than consumed with it.
+            remainder = cleaned[weight_detail.end():].strip(" .:-	")
+            shifted = _MONEY_AT_END.search(remainder)
+            shifted_cents = (
+                _money_to_cents(shifted.group("amount")) if shifted else None
+            )
+            if shifted:
+                remainder = remainder[: shifted.start()].strip(" .:-	")
+            described = _looks_like_description(remainder)
+            if described and shifted_cents is not None:
+                # The whole of the next product came up on this row: its
+                # description and its own amount. That is a complete item, so
+                # there is nothing to defer and nothing to wait for.
+                quantity, unit, unit_price = _parse_quantity(remainder)
+                parsed.items.append(
+                    OCRItem(
+                        description=remainder,
+                        line_total_cents=shifted_cents,
+                        quantity=quantity,
+                        quantity_unit=unit,
+                        unit_price_cents=unit_price,
+                        confidence=line.confidence,
+                    )
+                )
+                pending_description = ""
+            else:
+                # An amount with no description belongs to the row below.
+                deferred_amount = shifted_cents
+                pending_description = remainder if described else ""
+            line_index += 1
+            continue
         quantity_detail = _QTY_DETAIL.match(cleaned)
         if quantity_detail and parsed.items:
             quantity = Decimal(quantity_detail.group("qty"))
@@ -346,6 +413,10 @@ def parse_ocr_receipt(
             description = f"{pending_description} {description}".strip()
         pending_description = ""
         if not description or _SKIP_ITEM.match(description):
+            if not description:
+                orphan = _money_to_cents(amount_match.group("amount"))
+                if orphan is not None:
+                    orphan_amounts.append(orphan)
             line_index += 1
             continue
         cents = _money_to_cents(amount_match.group("amount"))
@@ -386,12 +457,36 @@ def parse_ocr_receipt(
         )
         line_index += 1
 
+    line_sum = sum(item.line_total_cents for item in parsed.items)
+    if parsed.total_cents is None:
+        # The total is the one number that verifies every other: when the lines
+        # sum to it, nothing else needs checking. On the benchmark receipt OCR
+        # read "174.35" twice at full confidence and the parser discarded both,
+        # because the "Subtotal"/"Total" labels beside them were lost to
+        # shadow. An unlabelled amount is only accepted here when it is at
+        # least the sum of the lines, so it can corroborate them rather than
+        # contradict them, and a value printed twice is preferred because a
+        # receipt states its total next to its subtotal.
+        parsed.total_cents = _total_from_orphans(orphan_amounts, line_sum)
+        if parsed.total_cents is not None:
+            orphan_amounts = [
+                amount
+                for amount in orphan_amounts
+                if amount != parsed.total_cents
+            ]
+
     if parsed.merchant == "Other":
         parsed.warnings.append("Merchant was not recognised.")
     if parsed.purchase_date is None:
         parsed.warnings.append("Purchase date was not recognised.")
     if parsed.total_cents is None:
         parsed.warnings.append("Receipt total was not recognised.")
+    unmatched = [amount for amount in orphan_amounts if amount > 0]
+    if unmatched:
+        parsed.warnings.append(
+            f"{len(unmatched)} amount{'s' if len(unmatched) != 1 else ''} "
+            "were read without a matching product."
+        )
     if not parsed.items:
         parsed.warnings.append("No line items were recognised.")
     low_confidence = sum(
@@ -513,6 +608,25 @@ def _last_money_amount(lines: Iterable[OCRLine]) -> int | None:
 
 def _best_amount(values: Sequence[int]) -> int | None:
     return values[-1] if values else None
+
+
+def _total_from_orphans(amounts: Sequence[int], line_sum: int) -> int | None:
+    """Pick a receipt total from amounts that had no description.
+
+    Only amounts at least as large as the parsed lines qualify: a total below
+    its own line items is not a total, and treating one as such would invent a
+    discrepancy. Where several qualify, a repeated value wins — a receipt
+    prints its total beside its subtotal — and otherwise the largest, which is
+    the total rather than a tender or change line.
+    """
+
+    candidates = [amount for amount in amounts if amount >= line_sum > 0]
+    if not candidates:
+        return None
+    repeated = [
+        amount for amount in candidates if candidates.count(amount) > 1
+    ]
+    return max(repeated) if repeated else max(candidates)
 
 
 def _amount_fit(amount: int, items: Sequence[OCRItem]) -> int:
@@ -766,8 +880,15 @@ def _find_total(lines: Iterable[OCRLine]) -> int | None:
 
 
 def _money_to_cents(value: str) -> int | None:
+    cleaned = value.replace("$", "").replace(" ", "")
+    # A comma with exactly two digits after it and nothing else is a decimal
+    # point the OCR read as a comma — "9,99" is $9.99, not $999.
+    if re.fullmatch(r"\d+,\d{2}", cleaned):
+        cleaned = cleaned.replace(",", ".")
+    else:
+        cleaned = cleaned.replace(",", "")
     try:
-        amount = Decimal(value.replace("$", "").replace(",", "").replace(" ", ""))
+        amount = Decimal(cleaned)
     except InvalidOperation:
         return None
     return int((amount * 100).quantize(Decimal("1")))

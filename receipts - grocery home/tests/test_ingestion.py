@@ -22,6 +22,7 @@ from grocery_home.ingestion import (
 from grocery_home.database import create_database, initialize_schema
 from grocery_home.models import ProcessingStatus, Receipt, ReceiptItem
 from grocery_home.ocr import OCRLine, OCRResult
+from grocery_home.services import receipt_warnings
 
 
 def image_bytes(kind: str = "PNG", size: tuple[int, int] = (640, 1200)) -> bytes:
@@ -256,3 +257,120 @@ def test_secondary_photo_hash_match_is_ocrd_as_its_own_receipt(
         assert [item.description for item in receipt.items] == ["Bread"]
 
     database.dispose()
+
+
+class BalancedOCR:
+    """Lines that sum to the stated total, each read imperfectly."""
+
+    def read(self, _image: Image.Image) -> OCRResult:
+        return OCRResult(
+            (
+                OCRLine("ALDI STORES", 0.98),
+                OCRLine("18/07/2026", 0.97),
+                OCRLine("380308 Tomatoes Roma 480g 5.29 A", 0.55),
+                OCRLine("421255 Napkin White 200pk 1.89 B", 0.51),
+                OCRLine("TOTAL $7.18", 0.99),
+            )
+        )
+
+
+class UnbalancedOCR:
+    """One line read poorly, and a total the lines do not reach."""
+
+    def read(self, _image: Image.Image) -> OCRResult:
+        return OCRResult(
+            (
+                OCRLine("ALDI STORES", 0.98),
+                OCRLine("18/07/2026", 0.97),
+                OCRLine("380308 Tomatoes Roma 480g 5.29 A", 0.99),
+                OCRLine("421255 Napkin White 200pk 1.89 B", 0.40),
+                OCRLine("TOTAL $19.99", 0.99),
+            )
+        )
+
+
+def _process(
+    tmp_path: Path, adapter: object, name: str
+) -> tuple[Receipt, list[tuple[str, bool]]]:
+    database = create_database(database_url="sqlite+pysqlite:///:memory:")
+    initialize_schema(database)
+    storage = tmp_path / name
+    stored = store_validated_uploads(
+        validate_upload_batch([(f"{name}.png", image_bytes())]),
+        storage,
+    )
+    with database.session() as session:
+        batch_id = create_upload_batch(session, stored).id
+    with database.session() as session:
+        receipt = process_upload_batch(
+            session,
+            batch_id,
+            storage_dir=storage,
+            ocr_adapter=adapter,
+        )
+        session.refresh(receipt)
+        # Detach what the assertions need before the session closes.
+        return receipt, [
+            (item.description, item.needs_review) for item in receipt.items
+        ]
+
+
+def test_a_receipt_that_balances_flags_no_lines_for_review(
+    tmp_path: Path,
+) -> None:
+    """Arithmetic outranks per-character confidence.
+
+    The stated total is read from a different part of the page than the line
+    items, so lines that sum to it are corroborated by independent evidence.
+    Flagging them anyway is what asked people to check thirty-three rows on a
+    receipt that had already proved itself to the cent — and the flag was not
+    even a confidence signal: it ORed in the receipt's own status, and a
+    photographed receipt is always `needs_review`, so every line of every photo
+    was always flagged.
+    """
+
+    receipt, lines = _process(tmp_path, BalancedOCR(), "balanced")
+
+    # The receipt itself still goes to review: a photograph is not filed
+    # unseen, and the merchant and date are not covered by the arithmetic.
+    assert receipt.status == ProcessingStatus.NEEDS_REVIEW
+    assert len(lines) == 2
+    assert [flagged for _, flagged in lines] == [False, False]
+
+    warnings = receipt_warnings(receipt)
+    assert not any("uncertain text" in warning for warning in warnings)
+
+
+def test_a_receipt_that_does_not_balance_flags_only_the_poor_lines(
+    tmp_path: Path,
+) -> None:
+    """With no corroboration, per-line confidence is the best signal there is.
+
+    It has to mean something, though: only the line actually read poorly.
+    """
+
+    receipt, lines = _process(tmp_path, UnbalancedOCR(), "unbalanced")
+
+    flagged = [description for description, needs in lines if needs]
+    assert len(lines) == 2
+    assert len(flagged) == 1
+    assert "Napkin" in flagged[0]
+
+
+def test_a_shortfall_names_both_numbers_and_says_which_to_check(
+    tmp_path: Path,
+) -> None:
+    """"Line items differ from the total by $6.48" named no next action.
+
+    The answer is almost never to re-read every line, so the warning says what
+    the two numbers are and which one is in question.
+    """
+
+    receipt, _lines = _process(tmp_path, UnbalancedOCR(), "shortfall")
+
+    warnings = receipt_warnings(receipt)
+    shortfall = [w for w in warnings if "lines are" in w or "Check the total" in w]
+    assert shortfall, warnings
+    assert "$19.99" in shortfall[0]
+    assert "$7.18" in shortfall[0]
+    assert "$12.81" in shortfall[0]

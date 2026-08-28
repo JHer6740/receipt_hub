@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session, selectinload
 from .analytics import product_identity, refresh_analytics_snapshot
 from .jobs import enqueue_job
 from .models import (
+    RECONCILE_TOLERANCE_CENTS,
     AnalyticsSnapshot,
     BackgroundJob,
     Household,
@@ -589,10 +590,28 @@ def receipt_warnings(receipt: Receipt) -> list[str]:
         warnings.append("Receipt total is missing.")
     if not receipt.items:
         warnings.append("No line items were recognised. Add at least one item.")
-    if receipt.total_cents is not None and abs(line_sum - receipt.total_cents) > 5:
-        warnings.append(
-            f"Line items differ from the receipt total by {money(abs(line_sum - receipt.total_cents))}."
-        )
+    if (
+        receipt.total_cents is not None
+        and receipt.total_cents > 0
+        and receipt.items
+        and abs(line_sum - receipt.total_cents) > RECONCILE_TOLERANCE_CENTS
+    ):
+        # Name both numbers and say which one to look at. "Line items differ
+        # from the total by $6.48" told someone that something was wrong
+        # without saying what to do about it, and the answer is almost never
+        # to re-read every line.
+        gap = receipt.total_cents - line_sum
+        if gap > 0:
+            warnings.append(
+                f"The total reads {money(receipt.total_cents)} but the lines "
+                f"add to {money(line_sum)}, so {money(gap)} of lines are "
+                "missing."
+            )
+        else:
+            warnings.append(
+                f"The lines add to {money(line_sum)}, more than the stated "
+                f"total of {money(receipt.total_cents)}. Check the total."
+            )
     uncertain = sum(1 for item in receipt.items if item.needs_review)
     if uncertain:
         warnings.append(

@@ -1,7 +1,10 @@
 # Getting OCR right the first time
 
-**Status:** plan, not built. Written 28 August 2026 from the first real
-physical-device benchmark. Nothing here has been implemented.
+**Status:** items 1-4 built and tested, 28 August 2026. Items 5-7 not built —
+see [What is built](#what-is-built) at the end for exactly what shipped, what
+did not, and why.
+
+Written from the first real physical-device benchmark.
 
 ## The concern
 
@@ -128,6 +131,28 @@ rows both invents products and **shifts name-to-price pairing by one row**: on
 this receipt `Pper Towel DL 3pk` was given $7.46, which belongs to the
 `Cut Wtrmelon Loose` beneath it. ALDI and Woolworths receipts are full of these.
 
+## The losses were in pairing, not in reading
+
+Dumping the raw OCR lines for the benchmark photograph settled what was
+recoverable. Every number the parser "missed" was in fact read, at full
+confidence:
+
+| OCR line | Text | Confidence | What the parser did |
+|---|---|---:|---|
+| 107 | `1.09` | 1.00 | discarded — no description beside it |
+| 108 | `1.85` | 1.00 | discarded |
+| 110 | `2.45` | 1.00 | discarded |
+| 111 | `174.35` | 1.00 | discarded — the "Subtotal" label was lost to shadow |
+| 112 | `174.35` | 1.00 | discarded — the "Total" label was lost to shadow |
+
+Mean OCR confidence over the whole receipt: **0.984**. So this was never a
+reading problem, and item 4 does not need a second pass over the image after
+all — the total is already in hand and was being thrown away because
+`_find_total` required the literal word "TOTAL" on the line.
+
+That also means the "3 lines lost to shadow" were not lost. They were read and
+dropped, which is a different and much more fixable thing.
+
 ## What to do, in order
 
 ### 1. Let arithmetic overrule confidence
@@ -240,3 +265,74 @@ descriptions alone unless the arithmetic disagrees.
 - What tolerance? `receipt_warnings` uses 5c today. Rounding on weighed items
   can exceed that legitimately.
 - Where does item 5's dictionary live if a household later disputes a mapping?
+
+## What is built
+
+Implemented and tested on 28 August 2026. **The service needs a redeploy for
+any of it to reach the phone.**
+
+### Items 1-4, done
+
+- **Arithmetic overrules confidence.** `ingestion.persist_parsed_receipt` no
+  longer ORs the receipt's status into every line. A line is flagged only when
+  its own text was read below `LINE_REVIEW_CONFIDENCE`, and not at all when the
+  lines sum to the stated total within `RECONCILE_TOLERANCE_CENTS` — one
+  constant now shared by the write path and the review path, in `models.py`.
+- **Disagreement names both numbers.** `services.receipt_warnings` replaces
+  "Line items differ from the receipt total by $12.81" with "The total reads
+  $19.99 but the lines add to $7.18, so $12.81 of lines are missing.", and says
+  "Check the total." when the lines exceed it instead.
+- **Continuation lines attach instead of becoming products.** `Qty 3 @ $9.99
+  ea.` survives OCR reading the `@` as a `0`, `O` or `a` and the decimal point
+  as a comma; `2.021kg Net @ 3.69 $/kg` has a handler at all for the first
+  time. Both hand on a product that was merged onto the same spatial row, so
+  nothing is swallowed with them.
+- **An unlabelled amount can serve as the total**, but only when it is at least
+  the sum of the lines — a total below its own items is not a total — and a
+  repeated value wins, because a receipt prints its total beside its subtotal.
+- **Amounts with no description are reported, not dropped**: "4 amounts were
+  read without a matching product."
+
+### Measured against the benchmark receipt
+
+| | Before | After |
+|---|---|---|
+| Total | not read | **$174.35** |
+| `Pper Towel DL 3pk` | $7.46 (the row below's price) | **$4.89** |
+| `Qty 3 0 $9,99 ea` | a product, $4.89 | attached: 3 @ $9.99 |
+| `2.021kg Net @ 3.69 $/kg` | a product, $2.59 | attached: 2.021 kg @ $3.69 |
+| Weighed items | no unit price | unit prices on all four |
+| Unexplained shortfall | silent | "4 amounts were read without a matching product" |
+| Lines flagged on a balancing receipt | all of them | **none** |
+
+The $6.48 still missing from that photograph is the four amounts whose
+descriptions the shadow ate. They are now named rather than quietly absent.
+
+For the Aldi receipt uploaded from the phone — 33 lines summing to $153.34 to
+the cent — this takes review from **33 prompts to none**.
+
+Backend suite: **104 passing**, up from 94. The new tests cover the misread
+at-sign, the weight continuation, a merged row handing on its product, the
+total fallback and its guard, orphan amounts, the comma decimal, per-line
+flagging with and without corroboration, and the reworded shortfall.
+
+### Items 5-7, not built
+
+- **Product-code learning (5)** is a feature, not a fix: new schema, a write
+  path at confirm time, tenancy scoping and its own tests. It is the largest
+  remaining lever and the only one that keeps paying off with use.
+- **Capture-time shadow warning (6)** needs a rule that does not nag, and
+  tuning it means holding the phone over real receipts in bad light. Worth
+  doing on the next device session rather than guessed at from a desk.
+- **Escalating to line prompts only after the total is confirmed (7)** is a
+  client interaction. The server now says which number is in question; the
+  review screen does not yet stage the questions that way.
+
+### Still not decided
+
+Whether a receipt whose lines reconcile, and whose merchant and date were both
+read, should file with **no review step at all**. Nothing above changes that:
+a photographed receipt still goes to review, it just arrives with nothing
+flagged. Turning that into an automatic file is a product decision, and the
+argument against it is that the arithmetic covers the money but not the
+merchant or the date.

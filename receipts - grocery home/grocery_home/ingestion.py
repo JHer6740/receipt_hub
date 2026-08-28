@@ -38,6 +38,10 @@ SUPPORTED_KINDS = PHOTO_KINDS | {"pdf"}
 STATUS_QUEUED = "queued"
 STATUS_EXTRACTING = "extracting"
 STATUS_NEEDS_REVIEW = "needs_review"
+
+# Below this, a line's own text was read poorly enough to be worth a person's
+# eye — but only when the receipt does not already balance.
+LINE_REVIEW_CONFIDENCE = 0.72
 STATUS_COMPLETE = "complete"
 STATUS_DUPLICATE = "duplicate"
 STATUS_FAILED = "failed"
@@ -460,6 +464,7 @@ def persist_parsed_receipt(
     from sqlalchemy import select
 
     from grocery_home.models import (
+        RECONCILE_TOLERANCE_CENTS,
         ProcessingStatus,
         Receipt,
         ReceiptItem,
@@ -537,6 +542,21 @@ def persist_parsed_receipt(
     )
     session.add(receipt)
 
+    # Whether the receipt agrees with itself.
+    #
+    # The stated total is read from a different part of the page than the line
+    # items, so when the lines sum to it, every price is corroborated by
+    # independent evidence. That is worth more than any per-character
+    # confidence score, and it is the difference between asking someone to
+    # check thirty-three rows and asking them to check nothing.
+    line_sum = sum(item.line_total_cents or 0 for item in parsed.items)
+    reconciles = bool(
+        parsed.items
+        and parsed.total_cents is not None
+        and parsed.total_cents > 0
+        and abs(line_sum - parsed.total_cents) <= RECONCILE_TOLERANCE_CENTS
+    )
+
     if duplicate is None:
         for item in parsed.items:
             normalized = normalize_key_part(item.description)
@@ -574,9 +594,17 @@ def persist_parsed_receipt(
                     promotional=item.promotional,
                     price_reduced=item.price_reduced,
                     confidence=item_confidence,
+                    # This used to OR in the receipt's own status, and a
+                    # photographed receipt is always `needs_review`, so every
+                    # line of every photo was flagged and the confidence test
+                    # after the `or` could never change the outcome. The flag
+                    # was a constant, rendered to people as a claim about each
+                    # individual line. Now it means what it says, and it is
+                    # not raised at all on a receipt that balances.
                     needs_review=(
-                        status == ProcessingStatus.NEEDS_REVIEW
-                        or (item.confidence is not None and item.confidence < 0.72)
+                        not reconciles
+                        and item.confidence is not None
+                        and item.confidence < LINE_REVIEW_CONFIDENCE
                     ),
                 )
             )

@@ -185,20 +185,29 @@ question. What the same benchmark found instead is a trust problem.
 
 - [x] **Measured.** `docs/ocr-review-burden.md` has the numbers, the evidence
   from four real receipts, and a plan in priority order. Not implemented.
-- [ ] **The per-line review flag carries no information.** `ingestion.py:577`
-  ORs the receipt's own status into every line, and photographed receipts are
-  always `needs_review`, so **every line of every photo is flagged, always** —
-  and the interface renders that constant as "Read with low confidence" on each
-  row. One receipt had 33 lines summing to its stated total *to the cent* and
-  all 33 were flagged.
-- [ ] **The arithmetic that would settle it is computed and ignored.**
-  `services.receipt_warnings` and the API's `balance` both reconcile lines
-  against the total; the flagging consults neither. Letting arithmetic overrule
-  confidence takes that receipt from 33 prompts to zero.
-- [ ] **Continuation lines are parsed as products.** `2.137kg Net @ 3.69 $/kg`
-  and `Qty 3 @ $9.99 ea.` become rows, which invents products and shifts
-  name-to-price pairing by one row. ALDI and Woolworths receipts are full of
-  them. The benchmark image is a ready-made fixture with a known answer.
+- [x] **The per-line review flag carried no information — fixed.**
+  `ingestion.py` ORed the receipt's own status into every line, and
+  photographed receipts are always `needs_review`, so every line of every photo
+  was flagged and the confidence test after the `or` could never change the
+  outcome. A line is now flagged only when its own text read poorly, and not at
+  all when the receipt balances. The Aldi receipt with 33 lines summing to its
+  total **to the cent** goes from 33 prompts to none.
+- [x] **Arithmetic now overrules confidence.** `RECONCILE_TOLERANCE_CENTS` is
+  one constant in `models.py`, shared by the write path and the review path.
+- [x] **Continuation lines attach instead of becoming products.** `Qty 3 @
+  $9.99 ea.` survives OCR reading the `@` as `0`/`O`/`a` and the decimal point
+  as a comma; `2.021kg Net @ 3.69 $/kg` has a handler for the first time. Fixed
+  a $7.46/$4.89 name-to-price shift on the benchmark receipt and gave every
+  weighed item a real unit price.
+- [x] **The total is recovered when its label is unreadable.** OCR had read
+  `174.35` twice at confidence 1.00 and the parser discarded both, because
+  `_find_total` required the literal word "TOTAL". An unlabelled amount is now
+  accepted only when it is at least the sum of the lines.
+- [x] **Amounts read without a description are reported, not dropped.**
+- [ ] **Redeploy the service** — all of the above is in the repository and none
+  of it is on the Pi yet.
+- [ ] Product-code learning, the capture-time shadow warning, and staging the
+  review questions behind the total are **not built**; see the plan for why.
 - [ ] Decide the open question in that document: should a receipt whose lines
   reconcile, with a merchant and a date, file without a review step at all?
 

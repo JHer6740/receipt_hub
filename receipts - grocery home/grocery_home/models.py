@@ -710,6 +710,12 @@ _KEY_WHITESPACE = re.compile(r"\s+")
 _KEY_PUNCTUATION = re.compile(r"[^a-z0-9]+")
 
 
+# How far line items may sum from a receipt's stated total and still count as
+# balancing. Thermal printers round weighed items, so an exact match is too
+# strict to be the test of whether a receipt agrees with itself.
+RECONCILE_TOLERANCE_CENTS = 5
+
+
 def normalize_key_part(value: object | None) -> str:
     """Normalize user/receipt text for stable natural and product keys."""
 
