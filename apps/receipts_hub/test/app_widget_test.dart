@@ -19,6 +19,7 @@ Future<GoRouter> pumpHub(
   WidgetTester tester, {
   required String location,
   bool household = true,
+  List<Override>? overrides,
 }) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
@@ -28,7 +29,10 @@ Future<GoRouter> pumpHub(
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: household ? householdOverrides() : releaseSurfaceOverrides(),
+      overrides: <Override>[
+        ...household ? householdOverrides() : releaseSurfaceOverrides(),
+        ...?overrides,
+      ],
       child: ReceiptsHubApp(router: router),
     ),
   );
@@ -443,5 +447,50 @@ void main() {
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('home-screen')), findsOneWidget);
+  });
+
+  testWidgets('review folds in server detail without throwing', (tester) async {
+    // The seam a real device found and no fixture did. `detailLoaded` is only
+    // ever set by an actual detail fetch, so this branch was dead in tests:
+    // the screen folded the loaded detail into its draft *during build*, which
+    // Riverpod refuses. Every capture therefore flashed Flutter's red error
+    // screen on the way into review, and — because the guard flag was set
+    // before the rejected write — the draft was left holding the summary,
+    // which has no line items, no tax and no reference.
+    final source = HouseholdFixture.appState.receipts.firstWhere(
+      (receipt) => receipt.id == 'r-1006',
+    );
+    final detailed = Receipt(
+      id: source.id,
+      merchant: source.merchant,
+      purchasedAt: source.purchasedAt,
+      txnRef: 'TXN-88231',
+      collectionKey: source.collectionKey,
+      status: source.status,
+      totalCents: source.totalCents,
+      taxCents: 375,
+      items: source.items,
+      detailLoaded: true,
+    );
+
+    await pumpHub(
+      tester,
+      location: '/receipts/r-1006/edit',
+      overrides: <Override>[
+        receiptWithDetailProvider(
+          'r-1006',
+        ).overrideWith((ref) async => detailed),
+      ],
+    );
+
+    // No red screen, in either the first frame or the one that follows it.
+    expect(tester.takeException(), isNull);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+
+    // And the detail actually landed in the draft, rather than being dropped
+    // along with the exception.
+    expect(find.text('TXN-88231'), findsOneWidget);
+    expect(find.text('3.75'), findsOneWidget);
   });
 }
